@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "exportedAt": "2026-07-07T01:48:01.189Z",
+  "points": [
+    {
+      "id": "mr9xu6n7a08fd",
+      "type": "消火栓",
+      "name": "【サンプル】本宮駅前 消火栓 No.1",
+      "lat": 37.5118,
+      "lng": 140.3898,
+      "status": "正常",
+      "notes": "例：正常。周囲に障害物なし。",
+      "district": "本宮",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T00:56:04.387Z"
+    },
+    {
+      "id": "mr9xu6n7jaua4",
+      "type": "消火栓",
+      "name": "【サンプル】市役所東 消火栓 No.2",
+      "lat": 37.5131,
+      "lng": 140.3935,
+      "status": "要点検",
+      "notes": "例：標識ポールがやや傾き。要確認。",
+      "district": "本宮",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T00:56:04.387Z"
+    },
+    {
+      "id": "mr9xu6n76q00i",
+      "type": "防火水槽",
+      "name": "【サンプル】荒井 防火水槽 40t",
+      "lat": 37.51,
+      "lng": 140.3922,
+      "status": "正常",
+      "notes": "例：吸管投入孔・蓋とも良好。",
+      "district": "荒井",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T00:56:04.387Z"
+    },
+    {
+      "id": "mr9zb9seh7yn9",
+      "type": "消火栓",
+      "name": "三松屋前",
+      "lat": 37.492907,
+      "lng": 140.484315,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T01:38:06.030Z"
+    }
+  ],
+  "plans": []
+}
