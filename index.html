@@ -302,6 +302,19 @@
     opacity:0; transition:opacity .25s; pointer-events:none; box-shadow:var(--shadow)}
   #toast.show{opacity:1}
 
+  /* 現況写真の拡大ポップアップ（ライトボックス） */
+  .pv-backdrop{position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,.9);
+    display:none; align-items:center; justify-content:center;
+    padding:16px; padding-top:calc(16px + env(safe-area-inset-top)); padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .pv-backdrop.show{display:flex}
+  .pv-backdrop img{max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; box-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .pv-close{position:absolute; top:calc(10px + env(safe-area-inset-top)); right:14px;
+    width:46px; height:46px; border-radius:50%; border:none; background:rgba(255,255,255,.18); color:#fff;
+    font-size:30px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    z-index:2; -webkit-tap-highlight-color:transparent}
+  .pv-close:hover{background:rgba(255,255,255,.3)}
+  .pv-close:active{background:rgba(255,255,255,.42)}
+
   .file-hidden{display:none}
   /* ポップアップ（訓練メモ等）をツールバー・送水カードより前面へ＝常にタップ可能に */
   .leaflet-popup-pane{z-index:1150}
@@ -744,6 +757,11 @@
 <input type="file" id="fileImport" accept="application/json,.json" class="file-hidden">
 <input type="file" id="photoInput" accept="image/*" multiple class="file-hidden">
 <div id="toast"></div>
+<!-- 現況写真の拡大表示（アプリ内ポップアップ） -->
+<div id="photoViewer" class="pv-backdrop">
+  <button id="pvClose" class="pv-close" title="閉じる">×</button>
+  <img id="pvImg" alt="現況写真">
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -885,6 +903,34 @@ function focusDistrict(name){
     geocodeDistrict(name);
   }
 }
+/* タップ地点の住所（大字＋字＋小字）を地理院の逆ジオコーディングで取得 */
+async function reverseGeocode(lat,lng){
+  try{
+    const url=`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lng}`;
+    const res=await fetch(url);
+    const j=await res.json();
+    const nm=j && j.results && j.results.lv01Nm;
+    return (nm && nm!=="－") ? nm : null;   // 例）"荒井字上原"
+  }catch(e){ return null; }
+}
+/* 町字名から大字を切り出す（最初の「字」「丁目」「数字」の前まで） */
+function extractOaza(lv01){
+  if(!lv01) return "";
+  const m=lv01.match(/^(.+?)(字|丁目|[0-9０-９])/);
+  return m ? m[1] : lv01;
+}
+/* 新規地点：地区＝大字、名称＝大字（＋字）を（空欄なら）自動入力。
+   小字は地理院APIでは取得できないため、名称は「大字字」を下書きし、小字は手入力してもらう */
+async function autofillAddress(p){
+  const addr=await reverseGeocode(p.lat, p.lng);
+  if(!addr || selectedId!==p.id) return;    // 取得失敗／別地点に移った場合は何もしない
+  const oaza=extractOaza(addr);
+  // 既に字／丁目／数字を含む詳細住所ならそのまま、大字のみなら「大字字」を下書き
+  const nameDraft = /字|丁目|[0-9０-９]/.test(addr) ? addr : (oaza+"字");
+  const nameEl=$('edName'), distEl=$('edDistrict');
+  if(nameEl && nameEl.value.trim()==="") nameEl.value=nameDraft;
+  if(distEl && distEl.value.trim()==="") distEl.value=oaza;
+}
 /* 地区に地点が無いときは国土地理院の住所検索で位置を取得して移動 */
 const geoCache={};
 async function geocodeDistrict(name){
@@ -991,6 +1037,7 @@ map.on('click',e=>{
   document.getElementById('addHint').classList.remove('show');
   map.getContainer().style.cursor='';
   openEditor(p.id, true);
+  autofillAddress(p);          // タップ地点の住所を名称・地区に自動入力（空欄のみ）
 });
 
 /* ============ エディタ ============ */
@@ -1037,7 +1084,7 @@ function renderPhotos(){
     const d=document.createElement('div'); d.className="photo";
     d.innerHTML=`<img src="${src}"><button title="削除">×</button>`;
     d.querySelector('button').onclick=()=>{ editing.photos.splice(i,1); renderPhotos(); };
-    d.querySelector('img').onclick=()=>window.open().document.write(`<img src="${src}" style="max-width:100%">`);
+    d.querySelector('img').onclick=()=>openPhoto(src);
     wrap.appendChild(d);
   });
   const add=document.createElement('div'); add.className="addphoto";
@@ -1045,6 +1092,12 @@ function renderPhotos(){
   add.onclick=()=>document.getElementById('photoInput').click();
   wrap.appendChild(add);
 }
+/* 現況写真の拡大ポップアップ（新規タブを開かず、アプリ内で表示・確実に閉じられる） */
+function openPhoto(src){ $('pvImg').src=src; $('photoViewer').classList.add('show'); }
+function closePhoto(){ $('photoViewer').classList.remove('show'); $('pvImg').removeAttribute('src'); }
+$('pvClose').onclick=closePhoto;
+$('photoViewer').onclick=e=>{ if(e.target===$('photoViewer')) closePhoto(); };  // 画像の外（背景）タップで閉じる
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('photoViewer').classList.contains('show')) closePhoto(); });
 document.getElementById('photoInput').onchange=async e=>{
   const files=[...e.target.files];
   for(const f of files){ const data=await compress(f); (editing.photos=editing.photos||[]).push(data); }
