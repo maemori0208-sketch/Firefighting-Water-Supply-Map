@@ -266,9 +266,10 @@
   .plan-item .pi-dist{font-size:11px; font-weight:700; color:#fff; background:var(--navy-soft); padding:1px 7px; border-radius:999px}
   .plan-item .pi-title{font-size:13px; margin-top:3px}
   .plan-item .pi-sum{font-size:11px; color:var(--muted); margin-top:3px}
-  .plan-item .pi-ft{display:flex; gap:8px; margin-top:9px}
-  .plan-item .pi-ft button{flex:0 0 auto; padding:7px 12px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:#fff}
-  .plan-item .pi-open{flex:1!important; background:var(--navy)!important; color:#fff; border-color:var(--navy)!important}
+  .plan-item .pi-ft{display:flex; flex-wrap:wrap; gap:8px; margin-top:9px}
+  .plan-item .pi-ft button{flex:0 0 auto; padding:7px 11px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:#fff}
+  .plan-item .pi-open{flex:1 1 auto!important; min-width:64px; background:var(--navy)!important; color:#fff; border-color:var(--navy)!important}
+  .plan-item .pi-pdf{color:var(--navy); border-color:var(--navy)!important}
   .plan-item .pi-over{color:var(--warn); border-color:var(--warn)!important}
   .plan-item .pi-del{color:var(--broken); border-color:var(--broken)!important}
   .plan-empty{color:var(--muted); font-size:12.5px; text-align:center; padding:24px 12px; line-height:1.7}
@@ -617,6 +618,7 @@
           </div>
           <div class="fld"><label>名称・目的</label><input type="text" id="planTitle" placeholder="例）荒井地区 中継送水訓練"></div>
           <button class="btn save" id="planSaveBtn" style="width:100%">新規に保存</button>
+          <button class="btn" id="planPdfBtn" style="width:100%;margin-top:8px;background:#fff;color:var(--navy);border:1px solid var(--navy)">🖨 現在の計画をPDFで保存</button>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">水元・火点・中継・メモ・各設定をまとめて記録します。</div>
         </div>
         <div class="plan-hist-hd">保存済みの計画</div>
@@ -1511,6 +1513,132 @@ function planHose(d){
 }
 function fmtDay(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return iso;
   return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,'0')+"/"+String(d.getDate()).padStart(2,'0'); }
+
+/* ============ 訓練計画のPDF出力（印刷→PDF保存）============ */
+/* 区間ごとの距離・ホース本数を算出 */
+function planSegments(d){
+  if(!d.source||!d.fire) return null;
+  const s=d.source, relays=[...(d.relays||[])].sort((a,b)=>
+    map.distance([s.lat,s.lng],[a.lat,a.lng])-map.distance([s.lat,s.lng],[b.lat,b.lng]));
+  const path=[s,...relays,d.fire], P=d.params||{};
+  const hoseLen=P.hoseLen||20, factor=P.factor||1.2, legMax=P.legMax||200;
+  const segs=[]; let total=0,hose=0,over=false;
+  for(let i=0;i<path.length-1;i++){
+    const dd=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
+    const h=Math.max(1,Math.ceil(dd*factor/hoseLen));
+    total+=dd; hose+=h; if(dd>legMax) over=true;
+    segs.push({d:Math.round(dd), hose:h, over:dd>legMax});
+  }
+  return {relays, segs, total:Math.round(total), hose, pumps:1+relays.length,
+    hoseLen, factor, legMax, over};
+}
+/* 印刷用のHTML文書を生成 */
+function planToPrintHTML(plan){
+  const d=plan.data||{}, esc=escapeHtml;
+  const seg=planSegments(d);
+  const day=fmtDay(plan.date)||"（未設定）";
+  const now=fmtDate(new Date().toISOString());
+  // 送水系統図（縦フロー）
+  let flow="";
+  if(seg){
+    const s=d.source;
+    const nodes=[{ic:"💧",label:"水元"+(s.name?"（"+esc(s.name)+"）":""),memo:s.memo}];
+    seg.relays.forEach((r,i)=>nodes.push({ic:"➕",label:"中継ポンプ P"+(i+1),memo:r.memo}));
+    nodes.push({ic:"🔥",label:"火点",memo:d.fire.memo});
+    nodes.forEach((n,i)=>{
+      flow+=`<div class="node"><span class="nic">${n.ic}</span><div class="nb"><b>${n.label}</b>`
+          + (n.memo?`<div class="nm">${esc(n.memo)}</div>`:"")+`</div></div>`;
+      if(i<seg.segs.length){ const sg=seg.segs[i];
+        flow+=`<div class="conn"><span class="cl${sg.over?" over":""}">↓ 区間${i+1}　${sg.d}m ／ ${sg.hose}本${sg.over?"　⚠目安超":""}</span></div>`;
+      }
+    });
+  }else{
+    flow=`<div class="none">水元・火点が未配置のため系統図はありません。</div>`;
+  }
+  // 区間表
+  let rows="";
+  if(seg) seg.segs.forEach((sg,i)=>{
+    rows+=`<tr><td>区間${i+1}</td><td>${sg.d} m</td><td>${sg.hose} 本</td><td>${sg.over?"⚠ 目安超":"—"}</td></tr>`;
+  });
+  // メモ一覧
+  const memos=(d.notes||[]).filter(n=>n&&n.memo).map(n=>`<li>${esc(n.memo)}</li>`).join("");
+  const summary = seg
+    ? `合計ホース <b>${seg.hose}本</b>　／　可搬ポンプ <b>${seg.pumps}台</b>（水元1＋中継${seg.relays.length}）　／　総延長 約 <b>${seg.total}m</b>`
+    : `（送水計算なし）`;
+  const cond = seg ? `ホース1本 ${seg.hoseLen}m ／ 余裕係数 ${seg.factor} ／ 中継目安 ${seg.legMax}m` : "";
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>訓練計画書 ${esc(plan.title||"")}</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;
+    color:#12202f; margin:0; padding:20px; line-height:1.5; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .bar{position:sticky; top:0; background:#0f2440; color:#fff; margin:-20px -20px 18px; padding:12px 16px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  .bar button{background:#e4002b; color:#fff; border:none; border-radius:8px; padding:10px 18px; font-size:15px; font-weight:700; cursor:pointer}
+  .bar span{font-size:12px; color:#cdd8e8}
+  h1{font-size:20px; margin:0 0 4px; color:#0f2440}
+  .sub{font-size:12px; color:#5d6b7d; margin-bottom:14px}
+  table.meta{border-collapse:collapse; width:100%; margin-bottom:18px; font-size:13.5px}
+  table.meta th{text-align:left; width:88px; background:#eef1f5; border:1px solid #dce3ec; padding:6px 10px; font-weight:700; color:#0f2440}
+  table.meta td{border:1px solid #dce3ec; padding:6px 10px}
+  h2{font-size:14px; color:#0f2440; border-left:4px solid #e4002b; padding-left:8px; margin:20px 0 10px}
+  .flow{max-width:520px}
+  .node{display:flex; gap:10px; align-items:flex-start; border:1.5px solid #0f2440; border-radius:9px;
+    padding:8px 12px; background:#f5f8fc}
+  .node .nic{font-size:19px; line-height:1.3}
+  .node .nb b{font-size:14px; color:#0f2440}
+  .node .nm{font-size:12px; color:#333; margin-top:2px; white-space:pre-wrap}
+  .conn{padding:3px 0 3px 20px}
+  .conn .cl{font-size:12px; font-weight:700; color:#0f2440}
+  .conn .cl.over{color:#d92d20}
+  .none{font-size:12.5px; color:#5d6b7d}
+  .summary{font-size:14px; background:#f5f8fc; border:1px solid #dce3ec; border-radius:9px; padding:10px 12px}
+  .summary b{color:#0f2440; font-size:16px}
+  table.seg{border-collapse:collapse; width:100%; margin-top:10px; font-size:13px}
+  table.seg th{background:#0f2440; color:#fff; padding:6px 8px; text-align:left}
+  table.seg td{border:1px solid #dce3ec; padding:5px 8px}
+  table.seg td:nth-child(2),table.seg td:nth-child(3){text-align:right; font-variant-numeric:tabular-nums}
+  .cond{font-size:11.5px; color:#5d6b7d; margin-top:6px}
+  ul.memos{margin:6px 0 0; padding-left:20px; font-size:13px}
+  ul.memos li{margin:3px 0}
+  .foot{margin-top:26px; padding-top:10px; border-top:1px solid #dce3ec; font-size:11px; color:#8a94a6}
+  @media print{ .bar{display:none} body{padding:0} }
+  @page{ margin:14mm }
+</style></head><body>
+  <div class="bar"><button onclick="window.print()">🖨 PDFとして保存 / 印刷</button>
+    <span>この画面の「印刷」から保存先に「PDF」を選ぶと保存できます</span></div>
+  <h1>送水訓練 計画書</h1>
+  <div class="sub">本宮市 消防水利マップ</div>
+  <table class="meta">
+    <tr><th>実施日</th><td>${day}</td></tr>
+    <tr><th>地区</th><td>${esc(plan.district||"—")}</td></tr>
+    <tr><th>名称・目的</th><td>${esc(plan.title||"(無題)")}</td></tr>
+  </table>
+  <h2>送水系統図</h2>
+  <div class="flow">${flow}</div>
+  <h2>送水計算</h2>
+  <div class="summary">${summary}</div>
+  ${rows?`<table class="seg"><tr><th>区間</th><th>距離</th><th>ホース</th><th>判定</th></tr>${rows}</table>`:""}
+  ${cond?`<div class="cond">計算条件：${cond}</div>`:""}
+  ${memos?`<h2>メモ</h2><ul class="memos">${memos}</ul>`:""}
+  <div class="foot">出力：${now}　／　本宮市 消防水利マップ</div>
+</body></html>`;
+}
+/* 新規ウィンドウに印刷用ドキュメントを表示（ユーザーがPDF保存/印刷） */
+function exportPlanPDF(plan){
+  const w=window.open("","_blank");
+  if(!w){ toast("ポップアップがブロックされました。設定で許可してください"); return; }
+  w.document.open(); w.document.write(planToPrintHTML(plan)); w.document.close();
+  toast("PDF用の画面を開きました（印刷→PDF保存）");
+}
+/* 計画ライブラリ上部の「現在の計画」をPDF化 */
+function currentPlanForPDF(){
+  return { title:$('planTitle').value.trim()||"(無題)",
+    date:$('planDate').value||new Date().toISOString().slice(0,10),
+    district:$('planDistrict').value.trim(), data:currentPlanData() };
+}
+
 function renderPlanList(){
   const box=$('planList'); const plans=loadPlans()
     .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||"").localeCompare(a.createdAt||""));
@@ -1526,8 +1654,9 @@ function renderPlanList(){
       `<div class="pi-top"><span class="pi-date">${fmtDay(p.date)}</span>${p.district?`<span class="pi-dist">${escapeHtml(p.district)}</span>`:""}</div>
        <div class="pi-title">${escapeHtml(p.title||"(無題)")}</div>
        <div class="pi-sum">${sum}</div>
-       <div class="pi-ft"><button class="pi-open">開く</button><button class="pi-over">上書き</button><button class="pi-del">削除</button></div>`;
+       <div class="pi-ft"><button class="pi-open">開く</button><button class="pi-pdf">🖨 PDF</button><button class="pi-over">上書き</button><button class="pi-del">削除</button></div>`;
     el.querySelector('.pi-open').onclick=()=>openPlan(p);
+    el.querySelector('.pi-pdf').onclick=()=>exportPlanPDF(p);
     el.querySelector('.pi-over').onclick=()=>overwritePlan(p);
     el.querySelector('.pi-del').onclick=()=>{ if(confirm("この計画を削除します。よろしいですか？")){
       storePlans(loadPlans().filter(x=>x.id!==p.id)); renderPlanList(); toast("削除しました"); } };
@@ -1573,6 +1702,10 @@ $('planSaveBtn').onclick=()=>{
     district:$('planDistrict').value.trim(), title:$('planTitle').value.trim()||"(無題)",
     createdAt:new Date().toISOString(), data:currentPlanData() });
   storePlans(plans); renderPlanList(); toast("計画を保存しました");
+};
+$('planPdfBtn').onclick=()=>{
+  if(!(sim.source&&sim.fire)){ toast("PDFにするには水元と火点の両方を配置してください"); return; }
+  exportPlanPDF(currentPlanForPDF());
 };
 
 /* ============ 表示設定の保存・復元 ============ */

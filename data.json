@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-07T02:45:26.381Z",
+  "exportedAt": "2026-07-07T03:55:15.891Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
       "type": "消火栓",
-      "name": "三松屋前",
+      "name": "松沢字竹重内",
       "lat": 37.492907,
       "lng": 140.484315,
       "status": "正常",
@@ -14,7 +14,77 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-07T01:38:06.030Z"
+      "updated": "2026-07-07T03:53:51.110Z"
+    },
+    {
+      "id": "mra2os7v03080",
+      "type": "消火栓",
+      "name": "松沢字弥五郎内",
+      "lat": 37.486899,
+      "lng": 140.483025,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T03:54:03.277Z"
+    },
+    {
+      "id": "mra2t5zmyz51m",
+      "type": "防火水槽",
+      "name": "松沢字弥五郎内",
+      "lat": 37.488708,
+      "lng": 140.483645,
+      "status": "破損",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T03:54:15.694Z"
+    },
+    {
+      "id": "mra2xdt4h59th",
+      "type": "防火水槽",
+      "name": "松沢字平河内",
+      "lat": 37.484092,
+      "lng": 140.477975,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T03:54:29.114Z"
+    },
+    {
+      "id": "mra3rst0m8dvp",
+      "type": "消火栓",
+      "name": "",
+      "lat": 37.483923480033,
+      "lng": 140.46108216047287,
+      "status": "未確認",
+      "notes": "",
+      "district": "",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T03:42:10.836Z"
+    },
+    {
+      "id": "mra3rxi4jpky6",
+      "type": "消火栓",
+      "name": "松沢字平郎内",
+      "lat": 37.483898,
+      "lng": 140.460986,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T03:54:43.662Z"
     }
   ],
   "plans": [
