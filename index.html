@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>本宮市 消防水利マップ｜消火栓・防火水槽 点検管理</title>
+<meta name="theme-color" content="#0f2440">
+<meta name="apple-mobile-web-app-title" content="消防水利">
+<!-- 即時表示用の簡易favicon（読み込み後にJSが纏デザイン＋PNGへ差し替え） -->
+<link rel="icon" id="favicon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='2'%20y='2'%20width='60'%20height='60'%20rx='15'%20fill='%23c30019'/%3E%3Crect%20x='30.6'%20y='17'%20width='2.8'%20height='37'%20rx='1.4'%20fill='%23fff'/%3E%3Ccircle%20cx='32'%20cy='11'%20r='3'%20fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" id="appleIcon">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
@@ -454,7 +459,23 @@
 <div id="app">
   <header>
     <button id="menuToggle" class="hbtn" title="一覧">☰</button>
-    <svg class="mark" viewBox="0 0 24 24" fill="none"><path d="M12 2C8 6 6 9 6 13a6 6 0 0012 0c0-4-2-7-6-11z" fill="#e4002b" stroke="#fff" stroke-width="1.2"/></svg>
+    <svg class="mark" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="消防水利マップ">
+      <defs><linearGradient id="ficmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3a54"/><stop offset="1" stop-color="#c30019"/></linearGradient></defs>
+      <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#ficmg)"/>
+      <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="14.25" fill="none" stroke="#ffffff" stroke-opacity=".25" stroke-width="1.5"/>
+      <g fill="#ffffff">
+        <rect x="30.7" y="16" width="2.6" height="39" rx="1.3"/>
+        <circle cx="32" cy="10.5" r="2.8"/>
+        <rect x="26.9" y="13.4" width="10.2" height="10.2" rx="2" transform="rotate(45 32 18.5)"/>
+        <rect x="22.5" y="24.4" width="19" height="2.6" rx="1.3"/>
+      </g>
+      <g stroke="#ffffff" stroke-width="2.3" stroke-linecap="round">
+        <line x1="23.5" y1="26.6" x2="21" y2="43"/><line x1="26.3" y1="26.6" x2="24.8" y2="43.8"/>
+        <line x1="29.1" y1="26.6" x2="28.4" y2="44.2"/><line x1="32" y1="26.6" x2="32" y2="44.4"/>
+        <line x1="34.9" y1="26.6" x2="35.6" y2="44.2"/><line x1="37.7" y1="26.6" x2="39.2" y2="43.8"/>
+        <line x1="40.5" y1="26.6" x2="43" y2="43"/>
+      </g>
+    </svg>
     <h1>本宮市 消防水利マップ<small>消火栓・防火水槽　配置／点検管理</small></h1>
     <div class="spacer"></div>
     <button id="addBtn" class="hbtn primary" title="地図をタップして地点を追加">＋<span class="lbl"> 地点を追加</span></button>
@@ -1950,6 +1971,36 @@ function applyPrefs(p){
 let toastTimer=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
+
+/* ============ アプリアイコン（纏デザイン）============ */
+/* ヘッダーの纏バッジSVGを唯一のソースに、favicon（SVG）とホーム画面用PNG／manifestを生成 */
+(function installIcons(){
+  const el=document.querySelector('header .mark'); if(!el) return;
+  const svg=new XMLSerializer().serializeToString(el);
+  const svgUri='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  const setLink=(rel,href,type)=>{
+    let l=document.querySelector('link[rel="'+rel+'"]');
+    if(!l){ l=document.createElement('link'); l.rel=rel; document.head.appendChild(l); }
+    if(type) l.type=type; l.href=href;
+  };
+  setLink('icon', svgUri, 'image/svg+xml');       // タブ表示は精細なSVGを優先
+  const img=new Image();
+  img.onload=()=>{
+    const png=(s)=>{ const c=document.createElement('canvas'); c.width=c.height=s;
+      c.getContext('2d').drawImage(img,0,0,s,s); return c.toDataURL('image/png'); };
+    try{
+      setLink('apple-touch-icon', png(180));       // iOSホーム画面
+      const mani={ name:"本宮市 消防水利マップ", short_name:"消防水利", display:"standalone",
+        background_color:"#eef1f5", theme_color:"#0f2440",
+        icons:[{src:png(192),sizes:"192x192",type:"image/png"},
+               {src:png(512),sizes:"512x512",type:"image/png"}] };
+      const blob=new Blob([JSON.stringify(mani)],{type:"application/manifest+json"});
+      setLink('manifest', URL.createObjectURL(blob));  // Androidの「ホーム画面に追加」
+    }catch(e){}
+  };
+  img.onerror=()=>{};
+  img.src=svgUri;
+})();
 
 /* ============ 画面の高さ（iOS Firefox等のdvh不具合対策）============ */
 /* window.innerHeight（実際の表示領域）を --app-h に反映し、ツールバー開閉にも追従 */
