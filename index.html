@@ -22,10 +22,14 @@
   html,body{height:100%;margin:0}
   body{
     font-family: system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;
-    color:var(--ink); background:var(--bg); overflow:hidden;
+    color:var(--ink); background:var(--bg); overflow:hidden; overscroll-behavior:none;
     -webkit-text-size-adjust:100%;
   }
-  #app{display:flex; flex-direction:column; height:100dvh}
+  /* iOS Firefox 等での高さ不具合対策：JSが渡す実寸(--app-h)を最優先し、画面に固定 */
+  #app{
+    display:flex; flex-direction:column; position:fixed; top:0; left:0; width:100%;
+    height:100vh; height:100dvh; height:var(--app-h,100dvh);
+  }
 
   /* ---- Header ---- */
   header{
@@ -296,11 +300,11 @@
   /* Responsive */
   @media(max-width:760px){
     #menuToggle{display:inline-flex}
-    header{gap:8px; padding:7px 10px; padding-top:calc(7px + env(safe-area-inset-top))}
-    header h1{font-size:13.5px}
+    header{gap:5px; padding:7px 8px; padding-top:calc(7px + env(safe-area-inset-top))}
+    header h1{font-size:13px}
     header h1 small{display:none}          /* サブタイトルを畳んで横幅を確保 */
     header .mark{display:none}              /* ロゴは畳み、タイトルとボタンの幅を確保 */
-    .hbtn{padding:9px 11px; font-size:15px}   /* アイコンだけ・指で押しやすく */
+    .hbtn{padding:8px 8px; font-size:15px}   /* アイコンだけ・指で押しやすく */
     .hbtn .lbl{display:none}
 
     #sidebar{position:absolute; top:0; left:0; height:100%; width:88vw; max-width:360px;
@@ -371,14 +375,15 @@
 
   /* とても狭い端末（小型スマホ）向けの微調整 */
   @media(max-width:380px){
-    header h1{font-size:12.5px}
-    .hbtn{padding:8px 9px}
+    header{gap:3px; padding-left:6px; padding-right:6px}
+    header h1{font-size:12px}
+    .hbtn{padding:7px 6px; font-size:14px}
     .stats{gap:6px}
     .stat .n{font-size:18px}
   }
 
-  /* ---- データ（バックアップ）メニュー ---- */
-  #dataSheet{
+  /* ---- 共通シート（データメニュー・ヘルプ） ---- */
+  .sheet{
     position:absolute; z-index:1300; left:50%; top:50%;
     transform:translate(-50%,-50%) scale(.96); opacity:0; pointer-events:none;
     width:430px; max-width:calc(100vw - 24px); max-height:calc(100dvh - 40px);
@@ -386,7 +391,7 @@
     display:flex; flex-direction:column; overflow:hidden;
     transition:opacity .2s ease, transform .2s ease;
   }
-  #dataSheet.open{opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:auto}
+  .sheet.open{opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:auto}
   .ds-hd{background:var(--navy); color:#fff; padding:13px 16px; display:flex; align-items:center; gap:10px; flex:none}
   .ds-hd h2{font-size:15px; margin:0; flex:1; font-weight:700}
   .ds-hd button{background:none; border:none; color:#fff; font-size:24px; line-height:1; cursor:pointer; padding:0 2px}
@@ -408,17 +413,33 @@
   .ds-danger:hover{background:#fdeeec}
   .ds-danger:active{background:#fbe0dc}
 
+  /* ---- ヘルプ本文 ---- */
+  .help-intro{font-size:12.5px; color:var(--muted); line-height:1.6; margin:0 2px 2px}
+  .help-sec{margin-top:6px}
+  .help-h{font-size:12.5px; font-weight:800; color:var(--navy); margin:0 0 6px;
+    padding-bottom:5px; border-bottom:2px solid var(--line); letter-spacing:.02em}
+  .help-row{display:flex; gap:10px; align-items:flex-start; padding:4px 0; font-size:13px; line-height:1.5}
+  .help-key{flex:none; width:80px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:5px}
+  .help-key .hk-ic{font-size:16px; flex:none}
+  .help-desc{flex:1; min-width:0; color:var(--muted)}
+  .help-list{margin:2px 0 0; padding-left:20px; font-size:13px; line-height:1.65; color:var(--ink)}
+  .help-list li{margin:4px 0}
+  .help-list b{color:var(--navy)}
+  .help-badge{display:inline-block; min-width:16px; text-align:center; padding:0 4px; border-radius:5px;
+    color:#fff; font-size:11px; font-weight:800; vertical-align:1px}
+
   /* スマホ：下から出るボトムシート */
   @media(max-width:760px){
-    #dataSheet{
+    .sheet{
       left:0; top:auto; bottom:0; width:100%; max-width:100%;
       border-radius:16px 16px 0 0; max-height:86dvh;
       transform:translateY(100%); transition:transform .25s ease, opacity .2s ease;
     }
-    #dataSheet.open{transform:translateY(0)}
+    .sheet.open{transform:translateY(0)}
     .ds-hd{padding:14px 16px}
-    .ds-bd{padding:12px 12px calc(14px + env(safe-area-inset-bottom))}
+    .ds-bd{padding:12px 14px calc(16px + env(safe-area-inset-bottom))}
     .ds-item{padding:14px 13px}
+    .help-key{width:74px}
   }
 </style>
 </head>
@@ -433,6 +454,7 @@
     <button id="simBtn" class="hbtn" title="水元・火点を置いて訓練を計画">🎓<span class="lbl"> 訓練</span></button>
     <button id="gpsBtn" class="hbtn" title="現在地へ移動">📍<span class="lbl"> 現在地</span></button>
     <button id="fsBtn" class="hbtn" title="全画面表示" style="display:none">⛶<span class="lbl"> 全画面</span></button>
+    <button id="helpBtn" class="hbtn" title="使い方・ヘルプ">❓<span class="lbl"> ヘルプ</span></button>
     <button id="menuData" class="hbtn" title="保存・読込">⋯<span class="lbl"> データ</span></button>
   </header>
 
@@ -604,7 +626,7 @@
 
     <!-- データ（バックアップ）メニュー -->
     <div class="backdrop" id="dataBackdrop"></div>
-    <div id="dataSheet">
+    <div id="dataSheet" class="sheet">
       <div class="ds-hd"><h2>💾 データの保存・読み込み</h2><button id="dataClose" title="閉じる">×</button></div>
       <div class="ds-bd">
         <button class="ds-item" id="dsExport">
@@ -628,6 +650,61 @@
           <span class="ds-ic">🗑️</span>
           <span class="ds-tx"><b>全データを削除</b><small>この端末の全地点を消去します。元に戻せません。</small></span>
         </button>
+      </div>
+    </div>
+
+    <!-- ヘルプ -->
+    <div class="backdrop" id="helpBackdrop"></div>
+    <div id="helpSheet" class="sheet">
+      <div class="ds-hd"><h2>❓ 使い方・ヘルプ</h2><button id="helpClose" title="閉じる">×</button></div>
+      <div class="ds-bd">
+        <p class="help-intro">消火栓・防火水槽の配置と点検状況を地図で管理し、送水訓練の計画も作れます。データはこの端末に自動保存されます。</p>
+
+        <div class="help-sec">
+          <div class="help-h">ヘッダーのボタン</div>
+          <div class="help-row"><span class="help-key"><span class="hk-ic">☰</span>一覧</span><span class="help-desc">地点リスト・絞り込みの開閉（スマホ）</span></div>
+          <div class="help-row"><span class="help-key"><span class="hk-ic">＋</span>追加</span><span class="help-desc">地図をタップして消火栓・防火水槽を登録</span></div>
+          <div class="help-row"><span class="help-key"><span class="hk-ic">🎓</span>訓練</span><span class="help-desc">水元・火点を置いて送水（ホース本数・中継）を計画</span></div>
+          <div class="help-row"><span class="help-key"><span class="hk-ic">📍</span>現在地</span><span class="help-desc">GPSで今いる場所へ地図を移動</span></div>
+          <div class="help-row"><span class="help-key"><span class="hk-ic">⛶</span>全画面</span><span class="help-desc">全画面表示に切替（対応端末のみ表示）</span></div>
+          <div class="help-row"><span class="help-key"><span class="hk-ic">⋯</span>データ</span><span class="help-desc">バックアップの書き出し・読み込み</span></div>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">地図のマーカー</div>
+          <div class="help-row"><span class="help-key"><span class="help-badge" style="background:var(--hydrant)">H</span></span><span class="help-desc">消火栓（ピンの色＝<b>赤</b>）</span></div>
+          <div class="help-row"><span class="help-key"><span class="help-badge" style="background:var(--cistern)">水</span></span><span class="help-desc">防火水槽（ピンの色＝<b>青</b>）</span></div>
+          <div class="help-row"><span class="help-key">足元の丸</span><span class="help-desc">状態を表示：<b style="color:var(--ok)">緑=正常</b> ／ <b style="color:var(--warn)">橙=要点検</b> ／ <b style="color:var(--broken)">赤=破損</b> ／ 灰=未確認</span></div>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">基本の使い方</div>
+          <ul class="help-list">
+            <li><b>地点を追加</b>：「＋追加」→地図をタップ→種別・名称・状態などを入力して保存</li>
+            <li><b>編集</b>：マーカー、または一覧の項目をタップ→編集パネルが開きます</li>
+            <li><b>写真</b>：編集パネルの「写真を追加」から撮影・ファイル選択（複数可）</li>
+            <li><b>絞り込み</b>：一覧上部の種別・状態チップ、地区の選択、キーワード検索</li>
+            <li><b>表示レイヤー</b>：右上のカードで淡色地図／航空写真、水利基準円・水利空白などを切替</li>
+          </ul>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">🎓 送水訓練シミュレーション</div>
+          <ul class="help-list">
+            <li>「🎓訓練」を押し、ツールバーの<b>💧水元</b>→<b>🔥火点</b>の順に地図をタップ</li>
+            <li>必要なホース本数・可搬ポンプ台数を自動計算。<b>➕中継</b>で区間を分割できます</li>
+            <li><b>📝メモ</b>で注記を配置。マーカーのタップで文言・位置・向きを編集</li>
+            <li>下部カードの見出しをタップで開閉。<b>🗂計画を保存・履歴</b>で日付ごとに記録・振り返り</li>
+          </ul>
+        </div>
+
+        <div class="help-sec">
+          <div class="help-h">💾 バックアップ・引き継ぎ</div>
+          <ul class="help-list">
+            <li>「⋯データ」→<b>JSONで書き出し</b>で写真ごと保存。別端末で<b>読み込み</b>すれば引き継げます</li>
+            <li>点検一覧が必要なときは<b>CSVで書き出し</b>（Excel等で開けます）</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -1041,6 +1118,13 @@ $('dsClear').onclick =()=>{
     points=[]; save(); render(); closeDataSheet(); toast("全データを削除しました");
   }
 };
+
+/* ============ ヘルプ ============ */
+function openHelp(){ $('helpSheet').classList.add('open'); $('helpBackdrop').classList.add('show'); }
+function closeHelp(){ $('helpSheet').classList.remove('open'); $('helpBackdrop').classList.remove('show'); }
+$('helpBtn').onclick=openHelp;
+$('helpClose').onclick=closeHelp;
+$('helpBackdrop').onclick=closeHelp;
 /* 同じ場所にある data.json（共有データ）を取得する */
 async function fetchShared(url){
   try{
@@ -1555,6 +1639,18 @@ function applyPrefs(p){
 let toastTimer=null;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
+
+/* ============ 画面の高さ（iOS Firefox等のdvh不具合対策）============ */
+/* window.innerHeight（実際の表示領域）を --app-h に反映し、ツールバー開閉にも追従 */
+function setAppHeight(){
+  // innerHeight はツールバー開閉に追従しつつ、キーボード表示では縮まない（編集時の崩れ防止）
+  document.documentElement.style.setProperty('--app-h', Math.round(window.innerHeight) + 'px');
+  if(typeof map !== 'undefined') map.invalidateSize();
+}
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', ()=>{ setAppHeight(); setTimeout(setAppHeight, 250); });
+if(window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
 
 /* ============ 起動 ============ */
 (async function init(){
