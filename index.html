@@ -1554,36 +1554,42 @@ function planBounds(d){
   pts.forEach(p=>{ a=Math.min(a,p.lat); b=Math.max(b,p.lat); c=Math.min(c,p.lng); e=Math.max(e,p.lng); });
   return {minLat:a,maxLat:b,minLng:c,maxLng:e};
 }
-/* 訓練範囲を地理院タイルで描画し、水元/中継/火点/メモと送水線を重ねて画像化 */
+/* 現在の背景レイヤーに合わせたタイル種別を返す */
+function currentBaseTile(){
+  if($('lyPhoto') && $('lyPhoto').checked) return {u:'seamlessphoto', ext:'jpg', name:'地理院タイル（シームレス空中写真）'};
+  if($('lyBase2') && $('lyBase2').checked) return {u:'pale', ext:'png', name:'地理院タイル（淡色地図）'};
+  return {u:'std', ext:'png', name:'地理院タイル'};
+}
+/* 訓練範囲を地理院タイルで描画し、水元/中継/火点/メモと送水線を重ねて画像化。
+   出力は固定サイズ(W×H)で訓練範囲を中央に配置＝表示枠と同比率なので切れない */
 function renderPlanMapImage(d, opt){
   const bb=planBounds(d); if(!bb) return Promise.resolve(null);
-  const maxW=(opt&&opt.w)||960, maxH=(opt&&opt.h)||540, pad=0.20;
-  let dLat=(bb.maxLat-bb.minLat)||0.002, dLng=(bb.maxLng-bb.minLng)||0.002;
-  const minLat=bb.minLat-dLat*pad, maxLat=bb.maxLat+dLat*pad;
-  const minLng=bb.minLng-dLng*pad, maxLng=bb.maxLng+dLng*pad;
-  // 収まる最大ズームを選ぶ
+  const base=(opt&&opt.base)||currentBaseTile();
+  const W=(opt&&opt.w)||1080, aspect=(opt&&opt.aspect)||2.0, H=Math.round(W/aspect);
+  const pad=0.16;                                  // 端に寄りすぎない余白（枠比の16%）
+  const cLat=(bb.minLat+bb.maxLat)/2, cLng=(bb.minLng+bb.maxLng)/2;
+  // 訓練範囲(＋余白)が W×H に収まる最大ズームを選ぶ
   let z=18;
   for(; z>=8; z--){
-    const tl=llToWorldPx(maxLat,minLng,z), br=llToWorldPx(minLat,maxLng,z);
-    if((br.x-tl.x)<=maxW && (br.y-tl.y)<=maxH) break;
+    const tl=llToWorldPx(bb.maxLat,bb.minLng,z), br=llToWorldPx(bb.minLat,bb.maxLng,z);
+    if((br.x-tl.x)<=W*(1-2*pad) && (br.y-tl.y)<=H*(1-2*pad)) break;
   }
-  const tl=llToWorldPx(maxLat,minLng,z), br=llToWorldPx(minLat,maxLng,z);
-  const x0=tl.x, y0=tl.y;
-  const W=Math.max(120,Math.ceil(br.x-tl.x)), H=Math.max(120,Math.ceil(br.y-tl.y));
+  const cpx=llToWorldPx(cLat,cLng,z);
+  const x0=cpx.x-W/2, y0=cpx.y-H/2;               // 訓練範囲の中心を画像中央に
   const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#cfd8e3'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=(base.u==='seamlessphoto')?'#243b4a':'#cfd8e3'; ctx.fillRect(0,0,W,H);
   const toXY=p=>{ const q=llToWorldPx(p.lat,p.lng,z); return [q.x-x0, q.y-y0]; };
   // タイル読み込み
   const tiles=[];
-  for(let tx=Math.floor(tl.x/256); tx<=Math.floor((br.x-1)/256); tx++)
-    for(let ty=Math.floor(tl.y/256); ty<=Math.floor((br.y-1)/256); ty++)
+  for(let tx=Math.floor(x0/256); tx<=Math.floor((x0+W-1)/256); tx++)
+    for(let ty=Math.floor(y0/256); ty<=Math.floor((y0+H-1)/256); ty++)
       tiles.push({tx,ty});
   const load=t=>new Promise(res=>{
     const img=new Image(); img.crossOrigin='anonymous';
-    img.onload=()=>{ try{ ctx.drawImage(img, t.tx*256-x0, t.ty*256-y0); }catch(e){} res(); };
+    img.onload=()=>{ try{ ctx.drawImage(img, Math.round(t.tx*256-x0), Math.round(t.ty*256-y0)); }catch(e){} res(); };
     img.onerror=()=>res();
-    img.src=`https://cyberjapandata.gsi.go.jp/xyz/std/${z}/${t.tx}/${t.ty}.png`;
+    img.src=`https://cyberjapandata.gsi.go.jp/xyz/${base.u}/${z}/${t.tx}/${t.ty}.${base.ext}`;
   });
   return Promise.all(tiles.map(load)).then(()=>{
     // 既設水利（背景の点）
@@ -1611,11 +1617,11 @@ function renderPlanMapImage(d, opt){
     if(s) pin(s,'#0067c0','水',14);
     if(d.fire) pin(d.fire,'#e4002b','火',14);
     // 出典
-    ctx.font='10px sans-serif'; const at='地理院タイル';
+    ctx.font='11px sans-serif'; const at=base.name;
     const tw=ctx.measureText(at).width+8;
-    ctx.fillStyle='rgba(255,255,255,.82)'; ctx.fillRect(W-tw,H-15,tw,15);
-    ctx.fillStyle='#333'; ctx.textAlign='right'; ctx.textBaseline='bottom'; ctx.fillText(at,W-3,H-2);
-    try{ return canvas.toDataURL('image/jpeg',0.82); }catch(e){ return null; } // CORS失敗時はnull
+    ctx.fillStyle='rgba(255,255,255,.82)'; ctx.fillRect(W-tw,H-17,tw,17);
+    ctx.fillStyle='#333'; ctx.textAlign='right'; ctx.textBaseline='bottom'; ctx.fillText(at,W-3,H-3);
+    try{ return canvas.toDataURL('image/jpeg',0.85); }catch(e){ return null; } // CORS失敗時はnull
   });
 }
 /* 印刷用のHTML文書を生成 */
@@ -1669,7 +1675,7 @@ function planToPrintHTML(plan, mapImg){
   .head .sub{font-size:10.5px; color:#5d6b7d; margin-left:auto}
   .meta{display:flex; flex-wrap:wrap; gap:4px 16px; font-size:12px; margin-bottom:10px}
   .meta b{color:#0f2440}
-  .map{width:100%; height:62mm; object-fit:cover; border:1px solid #b9c4d2; border-radius:6px; display:block; margin-bottom:6px}
+  .map{width:100%; height:auto; border:1px solid #b9c4d2; border-radius:6px; display:block; margin-bottom:6px}
   .legend{font-size:10px; color:#5d6b7d; margin-bottom:12px; display:flex; gap:12px; flex-wrap:wrap; align-items:center}
   .legend i{display:inline-block; width:9px; height:9px; border-radius:50%; border:1px solid #fff; box-shadow:0 0 0 1px #999; margin-right:3px}
   .cols{display:flex; gap:14px; align-items:flex-start}
@@ -1730,7 +1736,7 @@ async function exportPlanPDF(plan){
     '<body style="font-family:system-ui,sans-serif;padding:28px;color:#334;font-size:15px">'+
     '🗺 訓練範囲の地図を生成しています…少しお待ちください。</body>');
   let mapImg=null;
-  try{ mapImg = await renderPlanMapImage(plan.data,{w:960,h:540}); }catch(e){ mapImg=null; }
+  try{ mapImg = await renderPlanMapImage(plan.data,{w:1080,aspect:2.0}); }catch(e){ mapImg=null; }
   try{
     w.document.open(); w.document.write(planToPrintHTML(plan, mapImg)); w.document.close();
   }catch(e){ toast("PDF画面の生成に失敗しました"); return; }
