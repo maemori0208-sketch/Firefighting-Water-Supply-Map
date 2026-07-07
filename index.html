@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>本宮市 消防水利マップ｜消火栓・防火水槽 点検管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -30,10 +30,13 @@
   /* ---- Header ---- */
   header{
     background:var(--navy); color:#fff; display:flex; align-items:center; gap:12px;
-    padding:9px 14px; flex:none; box-shadow:var(--shadow); z-index:1200;
+    padding:9px 14px; padding-top:calc(9px + env(safe-area-inset-top));
+    padding-left:calc(14px + env(safe-area-inset-left)); padding-right:calc(14px + env(safe-area-inset-right));
+    flex:none; box-shadow:var(--shadow); z-index:1200;
   }
   header .mark{width:26px;height:26px;flex:none}
-  header h1{font-size:16px; margin:0; letter-spacing:.02em; font-weight:700; white-space:nowrap}
+  header h1{font-size:16px; margin:0; letter-spacing:.02em; font-weight:700; white-space:nowrap;
+    min-width:0; overflow:hidden; text-overflow:ellipsis}
   header h1 small{display:block; font-size:10.5px; font-weight:400; color:#aebfd6; letter-spacing:.04em}
   header .spacer{flex:1}
   .hbtn{
@@ -101,7 +104,11 @@
     box-shadow:var(--shadow); border:1px solid var(--line); font-size:12.5px;
   }
   #layerCard{top:10px; right:10px; width:210px; overflow:hidden}
-  #layerCard .hd{background:var(--navy-soft); color:#fff; padding:7px 12px; font-weight:700; font-size:12px}
+  #layerCard .hd{background:var(--navy-soft); color:#fff; padding:7px 12px; font-weight:700; font-size:12px;
+    cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none}
+  #layerCard .hd::after{content:"▾"; font-size:11px; transition:transform .2s}
+  #layerCard.collapsed .hd::after{transform:rotate(-90deg)}
+  #layerCard.collapsed .bd{display:none}
   #layerCard .bd{padding:8px 12px 10px}
   .row{display:flex; align-items:center; gap:8px; padding:4px 0}
   .row label{flex:1; cursor:pointer}
@@ -167,6 +174,8 @@
 
   .backdrop{position:absolute; inset:0; background:rgba(15,36,64,.35); z-index:1250; display:none}
   .backdrop.show{display:block}
+  #sidebarBackdrop{z-index:1090; background:rgba(15,36,64,.30)}
+  .hbtn,.chip,.sim-btn,.tbtn,.sbtn,.item,.dz-go,.seg button{-webkit-tap-highlight-color:transparent}
 
   /* Leaflet custom markers */
   .pin{position:relative; width:30px; height:30px}
@@ -273,12 +282,69 @@
   /* Responsive */
   @media(max-width:760px){
     #menuToggle{display:inline-flex}
-    header h1{font-size:14px}
-    #sidebar{position:absolute; top:0; left:0; height:100%; width:86vw; max-width:340px;
-      transform:translateX(-105%); transition:transform .25s; box-shadow:var(--shadow)}
+    header{gap:8px; padding:7px 10px; padding-top:calc(7px + env(safe-area-inset-top))}
+    header h1{font-size:13.5px}
+    header h1 small{display:none}          /* サブタイトルを畳んで横幅を確保 */
+    header .mark{width:22px;height:22px}
+    .hbtn{padding:9px 11px; font-size:15px}   /* アイコンだけ・指で押しやすく */
+    .hbtn .lbl{display:none}
+
+    #sidebar{position:absolute; top:0; left:0; height:100%; width:88vw; max-width:360px;
+      transform:translateX(-105%); transition:transform .25s; box-shadow:0 0 40px rgba(15,36,64,.4); z-index:1100}
     #sidebar.open{transform:none}
-    #layerCard{width:184px}
-    #legend{bottom:12px}
+    #sidebarBackdrop.show{display:block}
+
+    /* サイドバー内：指で押しやすく */
+    .district-bar,.stats,.filters{padding-left:12px; padding-right:12px}
+    .chip{padding:8px 13px; font-size:13px}
+    #search{font-size:16px; padding:10px 12px}   /* 16pxでiOSの自動ズーム防止 */
+    .item{padding:12px 10px}
+    .item .t{font-size:14.5px}
+    .item .s{font-size:12.5px}
+    #districtSel{font-size:16px; padding:10px 9px}
+
+    /* 地図上カード：画面を覆わないよう小さく／畳めるように */
+    #layerCard{width:196px; top:8px; right:calc(8px + env(safe-area-inset-right))}
+    body.sim-on #layerCard{display:none}   /* 訓練中はレイヤーカードを隠す */
+
+    /* 凡例：横一列でコンパクトに */
+    #legend{left:calc(8px + env(safe-area-inset-left)); bottom:calc(10px + env(safe-area-inset-bottom));
+      padding:6px 10px; display:flex; gap:9px 12px; flex-wrap:wrap; max-width:70vw}
+    #legend .lg{padding:0}
+    body.sim-on #legend{display:none}
+
+    /* 訓練カード：下部シート化 */
+    #simCard{left:calc(8px + env(safe-area-inset-left)); right:calc(8px + env(safe-area-inset-right));
+      bottom:calc(8px + env(safe-area-inset-bottom)); width:auto; max-height:50vh; overflow-y:auto}
+    /* 訓練ツールバー：折り返して画面内に収める */
+    #simToolbar{top:calc(8px + env(safe-area-inset-top)); max-width:calc(100vw - 16px);
+      flex-wrap:wrap; justify-content:center; border-radius:16px; row-gap:6px}
+    .sim-btn{padding:9px 13px; font-size:13px}
+    .sim-params input{width:52px; padding:6px 6px; font-size:16px}
+
+    /* 追加ヒント：ツールバー等と重ならない位置へ */
+    #addHint{top:calc(56px + env(safe-area-inset-top)); font-size:12px; padding:8px 13px;
+      width:max-content; max-width:88vw; text-align:center; line-height:1.4}
+
+    /* 編集ドロワー・計画ライブラリは全幅 */
+    #editor,#planLib{width:100%; max-width:100%}
+    #editor .ed-hd,#planLib .ed-hd{padding-top:calc(12px + env(safe-area-inset-top))}
+    .ed-ft{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+    .fld input[type=text],.fld input[type=number],.fld textarea,.fld select,
+    .fld input[type=date]{font-size:16px}   /* iOSズーム防止＋視認性 */
+    .btn{padding:13px}                        /* 保存・削除を押しやすく */
+    .tbtn{padding:12px 4px; font-size:14px}
+    .sbtn{padding:11px 4px}
+
+    #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+  }
+
+  /* とても狭い端末（小型スマホ）向けの微調整 */
+  @media(max-width:380px){
+    header h1{font-size:12.5px}
+    .hbtn{padding:8px 9px}
+    .stats{gap:6px}
+    .stat .n{font-size:18px}
   }
 </style>
 </head>
@@ -289,10 +355,10 @@
     <svg class="mark" viewBox="0 0 24 24" fill="none"><path d="M12 2C8 6 6 9 6 13a6 6 0 0012 0c0-4-2-7-6-11z" fill="#e4002b" stroke="#fff" stroke-width="1.2"/></svg>
     <h1>本宮市 消防水利マップ<small>消火栓・防火水槽　配置／点検管理</small></h1>
     <div class="spacer"></div>
-    <button id="addBtn" class="hbtn primary" title="地図をタップして地点を追加">＋ 地点を追加</button>
-    <button id="simBtn" class="hbtn" title="水元・火点を置いて訓練を計画">🎓 訓練</button>
-    <button id="gpsBtn" class="hbtn" title="現在地へ移動">📍 現在地</button>
-    <button id="menuData" class="hbtn" title="保存・読込">⋯ データ</button>
+    <button id="addBtn" class="hbtn primary" title="地図をタップして地点を追加">＋<span class="lbl"> 地点を追加</span></button>
+    <button id="simBtn" class="hbtn" title="水元・火点を置いて訓練を計画">🎓<span class="lbl"> 訓練</span></button>
+    <button id="gpsBtn" class="hbtn" title="現在地へ移動">📍<span class="lbl"> 現在地</span></button>
+    <button id="menuData" class="hbtn" title="保存・読込">⋯<span class="lbl"> データ</span></button>
   </header>
 
   <div id="main">
@@ -326,6 +392,7 @@
     </aside>
 
     <div id="map"></div>
+    <div class="backdrop" id="sidebarBackdrop"></div>
 
     <div id="addHint">地図上の設置場所をタップしてください（もう一度「地点を追加」で解除）</div>
 
@@ -916,8 +983,21 @@ function downloadBlob(blob,name){
 function dateStamp(){ const d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
 
 /* ============ モバイルサイドバー ============ */
-document.getElementById('menuToggle').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
-function closeSidebarMobile(){ if(window.innerWidth<=760) document.getElementById('sidebar').classList.remove('open'); }
+function setSidebar(open){
+  document.getElementById('sidebar').classList.toggle('open', open);
+  document.getElementById('sidebarBackdrop').classList.toggle('show', open);
+}
+document.getElementById('menuToggle').onclick=()=>{
+  setSidebar(!document.getElementById('sidebar').classList.contains('open'));
+};
+document.getElementById('sidebarBackdrop').onclick=()=>setSidebar(false);
+function closeSidebarMobile(){ if(window.innerWidth<=760) setSidebar(false); }
+
+/* ============ レイヤーカードの開閉（スマホでは初期は畳む）============ */
+document.querySelector('#layerCard .hd').onclick=()=>
+  document.getElementById('layerCard').classList.toggle('collapsed');
+if(window.matchMedia('(max-width:760px)').matches)
+  document.getElementById('layerCard').classList.add('collapsed');
 
 /* ============ 水利空白（火災リスク）の見える化 ============ */
 function computeRisk(){
@@ -969,6 +1049,7 @@ function simIcon(kind,label){
 }
 function simEnter(){
   sim.active=true;
+  document.body.classList.add('sim-on');
   $('simBtn').classList.add('primary','active');
   $('simToolbar').classList.add('show');
   $('simCard').style.display='block';
@@ -979,6 +1060,7 @@ function simEnter(){
 }
 function simExit(){
   sim.active=false; sim.place=null;
+  document.body.classList.remove('sim-on');
   $('simBtn').classList.remove('primary','active');
   $('simToolbar').classList.remove('show');
   $('simCard').style.display='none';
