@@ -299,7 +299,7 @@
     header{gap:8px; padding:7px 10px; padding-top:calc(7px + env(safe-area-inset-top))}
     header h1{font-size:13.5px}
     header h1 small{display:none}          /* サブタイトルを畳んで横幅を確保 */
-    header .mark{width:22px;height:22px}
+    header .mark{display:none}              /* ロゴは畳み、タイトルとボタンの幅を確保 */
     .hbtn{padding:9px 11px; font-size:15px}   /* アイコンだけ・指で押しやすく */
     .hbtn .lbl{display:none}
 
@@ -381,6 +381,7 @@
     <button id="addBtn" class="hbtn primary" title="地図をタップして地点を追加">＋<span class="lbl"> 地点を追加</span></button>
     <button id="simBtn" class="hbtn" title="水元・火点を置いて訓練を計画">🎓<span class="lbl"> 訓練</span></button>
     <button id="gpsBtn" class="hbtn" title="現在地へ移動">📍<span class="lbl"> 現在地</span></button>
+    <button id="fsBtn" class="hbtn" title="全画面表示" style="display:none">⛶<span class="lbl"> 全画面</span></button>
     <button id="menuData" class="hbtn" title="保存・読込">⋯<span class="lbl"> データ</span></button>
   </header>
 
@@ -553,7 +554,7 @@
 </div>
 
 <input type="file" id="fileImport" accept="application/json,.json" class="file-hidden">
-<input type="file" id="photoInput" accept="image/*" capture="environment" multiple class="file-hidden">
+<input type="file" id="photoInput" accept="image/*" multiple class="file-hidden">
 <div id="toast"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -920,6 +921,29 @@ document.getElementById('gpsBtn').onclick=()=>getGPS(([lat,lng])=>{
   if(meMarker) map.removeLayer(meMarker);
   meMarker=L.circleMarker([lat,lng],{radius:7,color:"#1769e0",fillColor:"#1769e0",fillOpacity:.9,weight:3}).addTo(map);
 });
+
+/* ============ 全画面表示 ============ */
+(function(){
+  const btn=$('fsBtn'), el=document.documentElement;
+  const req=el.requestFullscreen||el.webkitRequestFullscreen;
+  const exit=document.exitFullscreen||document.webkitExitFullscreen;
+  if(!req){ return; }               // 非対応端末（iPhone等）ではボタンを出さない
+  btn.style.display='';
+  function fsEl(){ return document.fullscreenElement||document.webkitFullscreenElement; }
+  btn.onclick=()=>{
+    try{ fsEl()? exit.call(document) : req.call(el); }
+    catch(e){ toast("全画面表示に切り替えられませんでした"); }
+  };
+  function sync(){
+    const on=!!fsEl();
+    btn.classList.toggle('primary',on);
+    btn.title = on ? "全画面を終了" : "全画面表示";
+    const lbl=btn.querySelector('.lbl'); if(lbl) lbl.textContent = on ? " 全画面解除" : " 全画面";
+    setTimeout(()=>map.invalidateSize(),120);   // 表示領域が変わるので地図を再計算
+  }
+  document.addEventListener('fullscreenchange',sync);
+  document.addEventListener('webkitfullscreenchange',sync);
+})();
 
 /* ============ データ入出力 ============ */
 document.getElementById('menuData').onclick=()=>{
