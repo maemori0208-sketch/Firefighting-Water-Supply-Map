@@ -376,6 +376,50 @@
     .stats{gap:6px}
     .stat .n{font-size:18px}
   }
+
+  /* ---- データ（バックアップ）メニュー ---- */
+  #dataSheet{
+    position:absolute; z-index:1300; left:50%; top:50%;
+    transform:translate(-50%,-50%) scale(.96); opacity:0; pointer-events:none;
+    width:430px; max-width:calc(100vw - 24px); max-height:calc(100dvh - 40px);
+    background:var(--card); border-radius:14px; box-shadow:0 14px 44px rgba(15,36,64,.32);
+    display:flex; flex-direction:column; overflow:hidden;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  #dataSheet.open{opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:auto}
+  .ds-hd{background:var(--navy); color:#fff; padding:13px 16px; display:flex; align-items:center; gap:10px; flex:none}
+  .ds-hd h2{font-size:15px; margin:0; flex:1; font-weight:700}
+  .ds-hd button{background:none; border:none; color:#fff; font-size:24px; line-height:1; cursor:pointer; padding:0 2px}
+  .ds-bd{padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:8px}
+  .ds-item{
+    display:flex; align-items:flex-start; gap:12px; width:100%; text-align:left;
+    padding:12px 13px; border:1px solid var(--line); border-radius:11px; background:#fff;
+    cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; transition:background .12s;
+  }
+  .ds-item:hover{background:var(--bg)}
+  .ds-item:active{background:#eaf1fb}
+  .ds-ic{font-size:21px; line-height:1.15; flex:none; width:26px; text-align:center}
+  .ds-tx{flex:1; min-width:0}
+  .ds-tx b{display:block; font-size:14px; color:var(--ink); font-weight:700}
+  .ds-tx small{display:block; font-size:11.5px; color:var(--muted); margin-top:3px; line-height:1.45}
+  .ds-sep{font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.03em; margin:4px 2px 0}
+  .ds-danger{border-color:#f3c6c2}
+  .ds-danger .ds-tx b{color:var(--broken)}
+  .ds-danger:hover{background:#fdeeec}
+  .ds-danger:active{background:#fbe0dc}
+
+  /* スマホ：下から出るボトムシート */
+  @media(max-width:760px){
+    #dataSheet{
+      left:0; top:auto; bottom:0; width:100%; max-width:100%;
+      border-radius:16px 16px 0 0; max-height:86dvh;
+      transform:translateY(100%); transition:transform .25s ease, opacity .2s ease;
+    }
+    #dataSheet.open{transform:translateY(0)}
+    .ds-hd{padding:14px 16px}
+    .ds-bd{padding:12px 12px calc(14px + env(safe-area-inset-bottom))}
+    .ds-item{padding:14px 13px}
+  }
 </style>
 </head>
 <body>
@@ -555,6 +599,35 @@
         </div>
         <div class="plan-hist-hd">保存済みの計画</div>
         <div id="planList"></div>
+      </div>
+    </div>
+
+    <!-- データ（バックアップ）メニュー -->
+    <div class="backdrop" id="dataBackdrop"></div>
+    <div id="dataSheet">
+      <div class="ds-hd"><h2>💾 データの保存・読み込み</h2><button id="dataClose" title="閉じる">×</button></div>
+      <div class="ds-bd">
+        <button class="ds-item" id="dsExport">
+          <span class="ds-ic">⬇️</span>
+          <span class="ds-tx"><b>JSONで書き出し（バックアップ）</b><small>写真も含めて丸ごと保存。復元や機種変更の引き継ぎに。</small></span>
+        </button>
+        <button class="ds-item" id="dsImport">
+          <span class="ds-ic">⬆️</span>
+          <span class="ds-tx"><b>JSONを読み込み（復元・取り込み）</b><small>書き出したファイルから復元します。既存データと統合も可能。</small></span>
+        </button>
+        <button class="ds-item" id="dsCsv">
+          <span class="ds-ic">📄</span>
+          <span class="ds-tx"><b>CSVで書き出し（一覧表）</b><small>Excel等で開ける点検一覧。写真は含みません。</small></span>
+        </button>
+        <button class="ds-item" id="dsShared">
+          <span class="ds-ic">🔄</span>
+          <span class="ds-tx"><b>共有データ(data.json)を再読込</b><small>配布された最新の共有データで表示を更新します。</small></span>
+        </button>
+        <div class="ds-sep">危険な操作</div>
+        <button class="ds-item ds-danger" id="dsClear">
+          <span class="ds-ic">🗑️</span>
+          <span class="ds-tx"><b>全データを削除</b><small>この端末の全地点を消去します。元に戻せません。</small></span>
+        </button>
       </div>
     </div>
   </div>
@@ -953,18 +1026,21 @@ document.getElementById('gpsBtn').onclick=()=>getGPS(([lat,lng])=>{
 })();
 
 /* ============ データ入出力 ============ */
-document.getElementById('menuData').onclick=()=>{
-  const c=confirm("OK：JSONで書き出し（バックアップ）\nキャンセル：他の操作メニューを開く");
-  if(c){ exportJSON(); } else { dataMenu(); }
+function openDataSheet(){ $('dataSheet').classList.add('open'); $('dataBackdrop').classList.add('show'); }
+function closeDataSheet(){ $('dataSheet').classList.remove('open'); $('dataBackdrop').classList.remove('show'); }
+$('menuData').onclick=openDataSheet;
+$('dataClose').onclick=closeDataSheet;
+$('dataBackdrop').onclick=closeDataSheet;
+/* 各操作（実行前にシートを閉じる） */
+$('dsExport').onclick=()=>{ closeDataSheet(); exportJSON(); };
+$('dsImport').onclick=()=>{ closeDataSheet(); $('fileImport').click(); };
+$('dsCsv').onclick   =()=>{ closeDataSheet(); exportCSV(); };
+$('dsShared').onclick=()=>{ closeDataSheet(); reloadSharedData(); };
+$('dsClear').onclick =()=>{
+  if(confirm("すべての地点データを削除します。元に戻せません。よろしいですか？")){
+    points=[]; save(); render(); closeDataSheet(); toast("全データを削除しました");
+  }
 };
-function dataMenu(){
-  const s=prompt("番号を入力：\n1) JSON書き出し（写真含む・バックアップ）\n2) JSON読み込み（復元／端末間コピー）\n3) CSV書き出し（一覧表・写真なし）\n4) 全データ削除\n5) 共有データ(data.json)を再読込","");
-  if(s==="1") exportJSON();
-  else if(s==="2") document.getElementById('fileImport').click();
-  else if(s==="3") exportCSV();
-  else if(s==="4"){ if(confirm("すべての地点データを削除します。元に戻せません。よろしいですか？")){ points=[]; save(); render(); toast("全データを削除しました"); } }
-  else if(s==="5") reloadSharedData();
-}
 /* 同じ場所にある data.json（共有データ）を取得する */
 async function fetchShared(url){
   try{
