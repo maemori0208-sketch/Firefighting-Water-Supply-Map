@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-07T06:29:01.555Z",
+  "exportedAt": "2026-07-07T10:33:47.868Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -73,6 +73,62 @@
       "cover": null,
       "hose": null,
       "updated": "2026-07-07T03:54:43.662Z"
+    },
+    {
+      "id": "mrai4hmd913ly",
+      "type": "消火栓",
+      "name": "松沢字平河内",
+      "lat": 37.48413,
+      "lng": 140.478085,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T10:24:44.178Z"
+    },
+    {
+      "id": "mrai8efxbggrt",
+      "type": "防火水槽",
+      "name": "松沢字竹重内",
+      "lat": 37.492915,
+      "lng": 140.482408,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T10:27:15.202Z"
+    },
+    {
+      "id": "mrai9fgzv4q1w",
+      "type": "防火水槽",
+      "name": "松沢字嶽山",
+      "lat": 37.488276,
+      "lng": 140.480418,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T10:28:00.914Z"
+    },
+    {
+      "id": "mraicz9ewyd94",
+      "type": "消火栓",
+      "name": "松沢字嶽山",
+      "lat": 37.487795,
+      "lng": 140.479882,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-07T10:31:11.073Z"
     }
   ],
   "plans": [
