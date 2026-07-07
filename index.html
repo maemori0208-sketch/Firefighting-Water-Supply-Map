@@ -276,6 +276,11 @@
   .sim-pop-row .mb{font-weight:800}
   .sim-notes{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:11.5px; line-height:1.55}
   .sim-notes div{margin-top:2px}
+  .sim-notes .note-row{display:flex; align-items:flex-start; gap:6px; margin-top:4px}
+  .sim-notes .note-row>span{flex:1; min-width:0}
+  .note-del{flex:none; width:28px; height:28px; border-radius:6px; border:1px solid var(--broken);
+    background:#fff; color:var(--broken); font-size:13px; line-height:1; cursor:pointer; padding:0}
+  .note-del:active{background:var(--broken); color:#fff}
 
   #toast{position:absolute; bottom:70px; left:50%; transform:translateX(-50%); z-index:1400;
     background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px; font-size:13px;
@@ -283,6 +288,8 @@
   #toast.show{opacity:1}
 
   .file-hidden{display:none}
+  /* ポップアップ（訓練メモ等）をツールバー・送水カードより前面へ＝常にタップ可能に */
+  .leaflet-popup-pane{z-index:1150}
   .leaflet-popup-content{font-size:13px; line-height:1.6}
   .leaflet-popup-content b{font-size:14px}
 
@@ -333,6 +340,10 @@
     #simToolbar .sim-title,#simToolbar .sim-btn{flex:none}
     .sim-btn{padding:9px 13px; font-size:13px}
     .sim-params input{width:52px; padding:6px 6px; font-size:16px}
+    /* メモ削除など指で押しやすく */
+    .note-del{width:34px; height:34px; font-size:15px}
+    .sim-pop-save,.sim-pop-del{padding:10px}
+    .sim-memo{font-size:16px}
 
     /* 追加ヒント：ツールバー等と重ならない位置へ */
     #addHint{top:calc(56px + env(safe-area-inset-top)); font-size:12px; padding:8px 13px;
@@ -1206,21 +1217,37 @@ function mkSimMarker(pt,kind,label){
   if(kind==="relay"||kind==="note") m.on('dblclick',()=>{ removePt(); simRender(); });
   return m;
 }
-function planNotes(){
-  const n=[];
-  if(sim.source&&sim.source.memo) n.push(["💧 水元", sim.source.memo]);
-  sim.relays.forEach((r,i)=>{ if(r.memo) n.push(["➕ 中継 P"+(i+1), r.memo]); });
-  if(sim.fire&&sim.fire.memo) n.push(["🔥 火点", sim.fire.memo]);
-  sim.notes.forEach((r,i)=>{ if(r.memo) n.push(["📝 メモ"+(i+1), r.memo]); });
-  return n;
-}
+/* 送水カード内のメモ・中継の一覧（✕で削除）。
+   ツールバー等の下に隠れて直接タップできないメモも、ここから確実に削除できる。 */
 function updateNotes(){
   const box=$('simNotes'); if(!box) return;
-  const n=planNotes();
-  box.innerHTML = n.length
-    ? `<div style="font-weight:700;color:var(--navy);margin-bottom:2px">📝 各地点メモ</div>`+
-      n.map(([t,m])=>`<div><b>${t}：</b>${escapeHtml(m)}</div>`).join("")
-    : `<div style="color:var(--muted)">各マーカーをタップするとメモを入力できます。</div>`;
+  const items=[];
+  if(sim.source&&sim.source.memo) items.push({t:"💧 水元", m:sim.source.memo});
+  sim.relays.forEach((r,i)=>items.push({t:"➕ 中継 P"+(i+1), m:r.memo,
+    del:()=>{ sim.relays=sim.relays.filter(x=>x!==r); simRender(); toast("中継を削除しました"); }}));
+  if(sim.fire&&sim.fire.memo) items.push({t:"🔥 火点", m:sim.fire.memo});
+  sim.notes.forEach((r,i)=>items.push({t:"📝 メモ"+(i+1), m:r.memo,
+    del:()=>{ sim.notes=sim.notes.filter(x=>x!==r); simRender(); toast("メモを削除しました"); }}));
+  box.innerHTML="";
+  if(!items.length){
+    box.innerHTML=`<div style="color:var(--muted)">各マーカーをタップするとメモを入力できます。</div>`;
+    return;
+  }
+  const hd=document.createElement('div');
+  hd.style.cssText="font-weight:700;color:var(--navy);margin-bottom:2px";
+  hd.textContent="📝 メモ・中継（✕で削除）";
+  box.appendChild(hd);
+  items.forEach(it=>{
+    const row=document.createElement('div'); row.className="note-row";
+    const txt=document.createElement('span');
+    txt.innerHTML=`<b>${it.t}：</b>${escapeHtml(it.m||"(メモなし)")}`;
+    row.appendChild(txt);
+    if(it.del){
+      const x=document.createElement('button'); x.className="note-del"; x.textContent="✕"; x.title="この地点を削除";
+      x.onclick=it.del; row.appendChild(x);
+    }
+    box.appendChild(row);
+  });
 }
 function simRender(){
   simLayer.clearLayers();
