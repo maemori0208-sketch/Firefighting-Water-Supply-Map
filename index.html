@@ -231,6 +231,7 @@
     border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.4); font-size:15px; font-weight:800; color:#fff}
   .sim-src{background:#0067c0} .sim-fire{background:#e4002b} .sim-relay{background:#1f9d55; font-size:13px}
   .sim-note{background:#e8951b; font-size:14px}
+  .sim-via{width:18px; height:18px; border-width:2px; background:#0f2440; box-shadow:0 1px 4px rgba(0,0,0,.4)}
   .seg-label{background:rgba(15,36,64,.9); color:#fff; font-size:11px; font-weight:700; padding:2px 7px;
     border-radius:999px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.3)}
   .sim-pop b{font-size:13px; color:var(--navy)}
@@ -505,6 +506,7 @@
       <button class="sim-btn" data-place="source">💧 水元</button>
       <button class="sim-btn" data-place="fire">🔥 火点</button>
       <button class="sim-btn" data-place="relay">➕ 中継</button>
+      <button class="sim-btn" data-place="via">📐 屈曲</button>
       <button class="sim-btn" data-place="note">📝 メモ</button>
       <button class="sim-btn ghost" id="simClear">やり直し</button>
       <button class="sim-btn ghost" id="simExit">終了</button>
@@ -700,6 +702,7 @@
           <ul class="help-list">
             <li>「🎓訓練」を押し、ツールバーの<b>💧水元</b>→<b>🔥火点</b>の順に地図をタップ</li>
             <li>必要なホース本数・可搬ポンプ台数を自動計算。<b>➕中継</b>で区間を分割できます</li>
+            <li><b>📐屈曲</b>でラインを道路に沿って曲げられます（ポンプは増えず、折れ線の実延長でホース計算）</li>
             <li><b>📝メモ</b>で注記を配置。マーカーのタップで文言・位置・向きを編集</li>
             <li>下部カードの見出しをタップで開閉。<b>🗂計画を保存・履歴</b>で日付ごとに記録・振り返り</li>
           </ul>
@@ -1265,8 +1268,9 @@ $('lyRisk').onchange=e=>{
 let sim={active:false, source:null, fire:null, relays:[], notes:[], place:null,
          hoseLen:20, factor:1.2, legMax:200};
 function simIcon(kind,label){
-  const cls=kind==="source"?"sim-src":kind==="fire"?"sim-fire":kind==="note"?"sim-note":"sim-relay";
-  return L.divIcon({className:"", html:`<div class="sim-pin ${cls}">${label}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
+  const cls=kind==="source"?"sim-src":kind==="fire"?"sim-fire":kind==="note"?"sim-note":kind==="via"?"sim-via":"sim-relay";
+  const sz=kind==="via"?18:30, a=sz/2;
+  return L.divIcon({className:"", html:`<div class="sim-pin ${cls}">${label}</div>`, iconSize:[sz,sz], iconAnchor:[a,a]});
 }
 function simEnter(){
   sim.active=true;
@@ -1307,7 +1311,8 @@ document.querySelectorAll('.sim-btn[data-place]').forEach(b=>{
     // 配置ボタンを押したら（＝地図をタップする時）はカードを畳んで地図を最優先
     if(arm && isMobile()) $('simCard').classList.add('collapsed');
     if(arm) toast(arm==="source"?"💧水元を置く場所をタップ": arm==="fire"?"🔥火点を置く場所をタップ":
-                  arm==="note"?"📝メモを置く場所をタップ（連続可）":"➕中継ポンプの場所をタップ（連続可）");
+                  arm==="note"?"📝メモを置く場所をタップ（連続可）":
+                  arm==="via"?"📐 曲げたい場所をタップ（ラインに挿入・連続可）":"➕中継ポンプの場所をタップ（連続可）");
   };
 });
 function nearestWater(latlng,maxM){
@@ -1315,25 +1320,80 @@ function nearestWater(latlng,maxM){
   points.forEach(p=>{ const d=map.distance(latlng,[p.lat,p.lng]); if(d<bd){bd=d;best=p;} });
   return (best && bd<=maxM)?best:null;
 }
+/* 点Pと線分ABの距離（画面ピクセルで近似） */
+function pointSegPx(p,a,b){
+  const P=map.project([p.lat,p.lng]), A=map.project([a.lat,a.lng]), B=map.project([b.lat,b.lng]);
+  const dx=B.x-A.x, dy=B.y-A.y, len2=dx*dx+dy*dy;
+  let t=len2?((P.x-A.x)*dx+(P.y-A.y)*dy)/len2:0; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(P.x-(A.x+t*dx), P.y-(A.y+t*dy));
+}
+/* 中継/屈曲点を、現在ラインの一番近い区間に挿入（＝道なりに追加できる） */
+function insertRoutePoint(node){
+  if(!sim.source || !sim.fire){ sim.relays.push(node); return; }
+  const path=[sim.source, ...sim.relays, sim.fire];
+  let bestSeg=0, bestD=Infinity;
+  for(let i=0;i<path.length-1;i++){
+    const d=pointSegPx(node, path[i], path[i+1]);
+    if(d<bestD){ bestD=d; bestSeg=i; }
+  }
+  sim.relays.splice(bestSeg, 0, node);
+}
 function simPlace(latlng){
   if(sim.place==="source"){
     const s=nearestWater(latlng,30);
     sim.source=s?{lat:s.lat,lng:s.lng,name:s.name||s.type,memo:""}:{lat:latlng.lat,lng:latlng.lng,memo:""};
     if(s) toast("水元：既設水利「"+(s.name||s.type)+"」にスナップ");
   }else if(sim.place==="fire"){ sim.fire={lat:latlng.lat,lng:latlng.lng,memo:""}; }
-  else if(sim.place==="relay"){ sim.relays.push({lat:latlng.lat,lng:latlng.lng,memo:""}); }
+  else if(sim.place==="relay"){ insertRoutePoint({lat:latlng.lat,lng:latlng.lng,memo:""}); }
+  else if(sim.place==="via"){ insertRoutePoint({lat:latlng.lat,lng:latlng.lng,memo:"",via:true}); }
   else if(sim.place==="note"){ sim.notes.push({lat:latlng.lat,lng:latlng.lng,memo:"メモ",memoPos:"bottom",memoVertical:false,fontSize:15,bold:false}); }
-  if(sim.place!=="relay" && sim.place!=="note"){ sim.place=null;
+  if(sim.place!=="relay" && sim.place!=="via" && sim.place!=="note"){ sim.place=null;
     document.querySelectorAll('.sim-btn[data-place]').forEach(x=>x.classList.remove('armed'));
     map.getContainer().style.cursor=''; }
   simRender();
 }
 function simPath(){
   if(!sim.source||!sim.fire) return null;
-  const s=sim.source;
-  const relays=[...sim.relays].sort((a,b)=>
-    map.distance([s.lat,s.lng],[a.lat,a.lng]) - map.distance([s.lat,s.lng],[b.lat,b.lng]));
-  return [s,...relays,sim.fire];
+  return [sim.source, ...sim.relays, sim.fire];
+}
+/* ポリライン上の中間地点（累積距離の半分の位置）を返す */
+function polyMidpoint(pts){
+  if(pts.length<2) return [pts[0].lat, pts[0].lng];
+  const seg=[]; let tot=0;
+  for(let i=0;i<pts.length-1;i++){ const dd=map.distance([pts[i].lat,pts[i].lng],[pts[i+1].lat,pts[i+1].lng]); seg.push(dd); tot+=dd; }
+  const half=tot/2; let acc=0;
+  for(let i=0;i<seg.length;i++){
+    if(acc+seg[i]>=half){ const t=seg[i]?(half-acc)/seg[i]:0;
+      return [pts[i].lat+(pts[i+1].lat-pts[i].lat)*t, pts[i].lng+(pts[i+1].lng-pts[i].lng)*t]; }
+    acc+=seg[i];
+  }
+  return [pts[pts.length-1].lat, pts[pts.length-1].lng];
+}
+/* 送水計算の中核：区間(=ポンプ間)ごとに、屈曲点を含む折れ線の実延長でホース本数を算出。
+   d は sim（hoseLen等を直持ち）でも 保存データ（d.params）でも可 */
+function computePlan(d){
+  if(!d.source||!d.fire) return null;
+  const rel=d.relays||[];
+  const path=[d.source, ...rel, d.fire];
+  const P=d.params||d;
+  const hoseLen=P.hoseLen||20, factor=P.factor||1.2, legMax=P.legMax||200;
+  const legs=[]; let cur=0, total=0, over=false, legPts=[path[0]];
+  for(let i=0;i<path.length-1;i++){
+    const dd=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
+    cur+=dd; total+=dd; legPts.push(path[i+1]);
+    const isFire=(i+1===path.length-1);
+    const isPump=!isFire && !path[i+1].via;         // 中継ポンプ＝区間の切れ目
+    if(isPump || isFire){
+      const h=Math.max(1,Math.ceil(cur*factor/hoseLen));
+      const o=cur>legMax; if(o) over=true;
+      legs.push({d:Math.round(cur), hose:h, over:o, mid:polyMidpoint(legPts)});
+      cur=0; legPts=[path[i+1]];
+    }
+  }
+  const pumpNodes=rel.filter(r=>!r.via);
+  return {path, legs, total:Math.round(total), hose:legs.reduce((s,l)=>s+l.hose,0),
+    pumps:1+pumpNodes.length, pumpNodes, vias:rel.filter(r=>r.via).length,
+    over, hoseLen, factor, legMax};
 }
 /* メモは自前のラベル（divIcon）で描画し、縦横をCSSで確実に制御する */
 function mkMemoLabel(pt){
@@ -1352,6 +1412,20 @@ function renderLabels(){
   add(sim.source); sim.relays.forEach(add); add(sim.fire); sim.notes.forEach(add);
 }
 function mkSimMarker(pt,kind,label){
+  // 屈曲点（経由点）は軽量ポップアップ（メモ装飾なし・削除のみ）
+  if(kind==="via"){
+    const m=L.marker([pt.lat,pt.lng],{icon:simIcon("via",""),draggable:true,zIndexOffset:-100});
+    m.bindPopup(`<div class="sim-pop"><b>📐 屈曲点（経由）</b>
+      <div style="font-size:11.5px;color:#5d6b7d;margin:5px 0 8px;line-height:1.5">送水ラインを道路に沿って曲げる中間点です。ポンプ台数は増えず、距離だけ加算します。ドラッグで移動できます。</div>
+      <div class="sim-pop-ft"><button class="sim-pop-del">この屈曲点を削除</button></div></div>`,
+      {minWidth:210, closeButton:true, keepInView:true,
+       autoPanPaddingTopLeft:L.point(12,82), autoPanPaddingBottomRight:L.point(12,88)});
+    m.on('popupopen',()=>{ const el=m.getPopup().getElement();
+      el.querySelector('.sim-pop-del').onclick=()=>{ sim.relays=sim.relays.filter(r=>r!==pt); m.closePopup(); simRender(); toast("屈曲点を削除しました"); }; });
+    m.on('dragend',()=>{ const ll=m.getLatLng(); pt.lat=ll.lat; pt.lng=ll.lng; simRender(); });
+    m.on('dblclick',()=>{ sim.relays=sim.relays.filter(r=>r!==pt); simRender(); toast("屈曲点を削除しました"); });
+    return m;
+  }
   const m=L.marker([pt.lat,pt.lng],{icon:simIcon(kind,label),draggable:true});
   const title = kind==="source"?"💧 水元"+(pt.name?"（"+escapeHtml(pt.name)+"）":"")
               : kind==="fire"?"🔥 火点" : kind==="note"?"📝 自由メモ" : "➕ 中継ポンプ "+label;
@@ -1423,8 +1497,13 @@ function updateNotes(){
   const box=$('simNotes'); if(!box) return;
   const items=[];
   if(sim.source&&sim.source.memo) items.push({t:"💧 水元", m:sim.source.memo});
-  sim.relays.forEach((r,i)=>items.push({t:"➕ 中継 P"+(i+1), m:r.memo,
-    del:()=>{ sim.relays=sim.relays.filter(x=>x!==r); simRender(); toast("中継を削除しました"); }}));
+  let pn=0;
+  sim.relays.forEach(r=>{
+    if(r.via){ items.push({t:"📐 屈曲点", m:r.memo||"（ラインの経由点）",
+      del:()=>{ sim.relays=sim.relays.filter(x=>x!==r); simRender(); toast("屈曲点を削除しました"); }}); }
+    else { pn++; items.push({t:"➕ 中継 P"+pn, m:r.memo,
+      del:()=>{ sim.relays=sim.relays.filter(x=>x!==r); simRender(); toast("中継を削除しました"); }}); }
+  });
   if(sim.fire&&sim.fire.memo) items.push({t:"🔥 火点", m:sim.fire.memo});
   sim.notes.forEach((r,i)=>items.push({t:"📝 メモ"+(i+1), m:r.memo,
     del:()=>{ sim.notes=sim.notes.filter(x=>x!==r); simRender(); toast("メモを削除しました"); }}));
@@ -1452,39 +1531,37 @@ function updateNotes(){
 function simRender(){
   simLayer.clearLayers();
   if(sim.source) simLayer.addLayer(mkSimMarker(sim.source,"source","水"));
-  sim.relays.forEach((r,i)=>simLayer.addLayer(mkSimMarker(r,"relay","P"+(i+1))));
+  let pn=0;
+  sim.relays.forEach(r=>{
+    if(r.via){ simLayer.addLayer(mkSimMarker(r,"via","")); }
+    else { pn++; simLayer.addLayer(mkSimMarker(r,"relay","P"+pn)); }
+  });
   if(sim.fire) simLayer.addLayer(mkSimMarker(sim.fire,"fire","🔥"));
   sim.notes.forEach(n=>simLayer.addLayer(mkSimMarker(n,"note","📝")));
   renderLabels();
-  const path=simPath();
+  const R=computePlan(sim);
   const out=$('simResult');
-  if(!path){
+  if(!R){
     out.className="sim-empty";
     out.innerHTML="「💧水元」→「🔥火点」の順に地図をタップして配置してください。<div id=\"simNotes\" class=\"sim-notes\"></div>";
     const placed=(sim.source?1:0)+(sim.fire?1:0);
     $('simMini').textContent = placed ? "配置中…（火点を置くと計算）" : "💧→🔥 を配置";
     updateNotes(); savePrefs(); return;
   }
-  simLayer.addLayer(L.polyline(path.map(p=>[p.lat,p.lng]),{color:"#e4002b",weight:4,opacity:.85}));
-  const {hoseLen,factor,legMax}=sim;
-  let total=0,totalHose=0,rows="",over=false;
-  for(let i=0;i<path.length-1;i++){
-    const d=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
-    const h=Math.max(1,Math.ceil(d*factor/hoseLen));
-    total+=d; totalHose+=h; if(d>legMax) over=true;
-    const mid=[(path[i].lat+path[i+1].lat)/2,(path[i].lng+path[i+1].lng)/2];
-    simLayer.addLayer(L.marker(mid,{icon:L.divIcon({className:"",html:`<div class="seg-label">${h}本</div>`,iconSize:[0,0]}),interactive:false}));
-    rows+=`<tr><td>区間${i+1}</td><td>${Math.round(d)}m ／ ${h}本</td></tr>`;
-  }
-  const pumps=1+sim.relays.length;
-  $('simMini').textContent = `🧯${totalHose}本 / 約${Math.round(total)}m ・ P${pumps}`;
+  simLayer.addLayer(L.polyline(R.path.map(p=>[p.lat,p.lng]),{color:"#e4002b",weight:4,opacity:.85}));
+  let rows="";
+  R.legs.forEach((lg,i)=>{
+    simLayer.addLayer(L.marker(lg.mid,{icon:L.divIcon({className:"",html:`<div class="seg-label">${lg.hose}本</div>`,iconSize:[0,0]}),interactive:false}));
+    rows+=`<tr><td>区間${i+1}</td><td>${lg.d}m ／ ${lg.hose}本${lg.over?" ⚠":""}</td></tr>`;
+  });
+  $('simMini').textContent = `🧯${R.hose}本 / 約${R.total}m ・ P${R.pumps}`;
   out.className="sim-readout";
   out.innerHTML=
-    `<div><span class="big">${totalHose}本</span> のホース（合計 約${Math.round(total)}m）</div>
-     <div>可搬ポンプ <span class="big">${pumps}台</span>（水元1＋中継${sim.relays.length}）</div>
+    `<div><span class="big">${R.hose}本</span> のホース（合計 約${R.total}m）</div>
+     <div>可搬ポンプ <span class="big">${R.pumps}台</span>（水元1＋中継${R.pumps-1}）${R.vias?` ・ 屈曲点 ${R.vias}`:""}</div>
      <table>${rows}</table>`+
-    (over?`<div class="warn">⚠ 目安（${legMax}m/区間）超の区間あり。中継ポンプ追加を検討。</div>`:"")+
-    (total>legMax && sim.relays.length===0?`<div class="warn">⚠ 総延長が目安を超過。「➕中継」で区間を分割できます。</div>`:"")+
+    (R.over?`<div class="warn">⚠ 目安（${R.legMax}m/区間）超の区間あり。中継ポンプ追加を検討。</div>`:"")+
+    (R.total>R.legMax && R.pumps===1?`<div class="warn">⚠ 総延長が目安を超過。「➕中継」で区間を分割できます。</div>`:"")+
     `<div id="simNotes" class="sim-notes"></div>`;
   updateNotes(); savePrefs();
 }
@@ -1507,36 +1584,15 @@ function currentPlanData(){
     view:{lat:map.getCenter().lat,lng:map.getCenter().lng,z:map.getZoom()} };
 }
 function planHose(d){
-  if(!d.source||!d.fire) return null;
-  const s=d.source, relays=[...(d.relays||[])].sort((a,b)=>
-    map.distance([s.lat,s.lng],[a.lat,a.lng])-map.distance([s.lat,s.lng],[b.lat,b.lng]));
-  const path=[s,...relays,d.fire], P=d.params||{};
-  let total=0,hose=0;
-  for(let i=0;i<path.length-1;i++){ const dd=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
-    total+=dd; hose+=Math.max(1,Math.ceil(dd*(P.factor||1.2)/(P.hoseLen||20))); }
-  return {total:Math.round(total),hose};
+  const R=computePlan(d);
+  return R ? {total:R.total, hose:R.hose} : null;
 }
 function fmtDay(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return iso;
   return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,'0')+"/"+String(d.getDate()).padStart(2,'0'); }
 
 /* ============ 訓練計画のPDF出力（印刷→PDF保存）============ */
-/* 区間ごとの距離・ホース本数を算出 */
-function planSegments(d){
-  if(!d.source||!d.fire) return null;
-  const s=d.source, relays=[...(d.relays||[])].sort((a,b)=>
-    map.distance([s.lat,s.lng],[a.lat,a.lng])-map.distance([s.lat,s.lng],[b.lat,b.lng]));
-  const path=[s,...relays,d.fire], P=d.params||{};
-  const hoseLen=P.hoseLen||20, factor=P.factor||1.2, legMax=P.legMax||200;
-  const segs=[]; let total=0,hose=0,over=false;
-  for(let i=0;i<path.length-1;i++){
-    const dd=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
-    const h=Math.max(1,Math.ceil(dd*factor/hoseLen));
-    total+=dd; hose+=h; if(dd>legMax) over=true;
-    segs.push({d:Math.round(dd), hose:h, over:dd>legMax});
-  }
-  return {relays, segs, total:Math.round(total), hose, pumps:1+relays.length,
-    hoseLen, factor, legMax, over};
-}
+/* 区間(=ポンプ間)ごとの実延長・本数（屈曲点を含む折れ線）を算出 */
+function planSegments(d){ return computePlan(d); }
 /* 経緯度→世界ピクセル座標（Web Mercator, 256px/タイル） */
 function llToWorldPx(lat,lng,z){
   const n=Math.pow(2,z), s=Math.sin(lat*Math.PI/180);
@@ -1565,17 +1621,23 @@ function currentBaseTile(){
 function renderPlanMapImage(d, opt){
   const bb=planBounds(d); if(!bb) return Promise.resolve(null);
   const base=(opt&&opt.base)||currentBaseTile();
-  const W=(opt&&opt.w)||1080, aspect=(opt&&opt.aspect)||2.0, H=Math.round(W/aspect);
-  const pad=0.16;                                  // 端に寄りすぎない余白（枠比の16%）
+  const maxW=(opt&&opt.maxW)||1120, maxH=(opt&&opt.maxH)||600;
+  const padPx=(opt&&opt.pad!=null)?opt.pad:40;     // 地点と枠端の余白(px)＝寄せ具合（小さいほど寄る）
+  const minAsp=1.9, maxAsp=2.5;                    // 横長に整える（縦に伸びて改ページするのを防ぐ）
   const cLat=(bb.minLat+bb.maxLat)/2, cLng=(bb.minLng+bb.maxLng)/2;
-  // 訓練範囲(＋余白)が W×H に収まる最大ズームを選ぶ
+  // 地点範囲(＋余白)が maxW×maxH に収まる最大ズームを選ぶ（=最も寄った表示）
   let z=18;
   for(; z>=8; z--){
     const tl=llToWorldPx(bb.maxLat,bb.minLng,z), br=llToWorldPx(bb.minLat,bb.maxLng,z);
-    if((br.x-tl.x)<=W*(1-2*pad) && (br.y-tl.y)<=H*(1-2*pad)) break;
+    if((br.x-tl.x)+2*padPx<=maxW && (br.y-tl.y)+2*padPx<=maxH) break;
   }
+  const tl=llToWorldPx(bb.maxLat,bb.minLng,z), br=llToWorldPx(bb.minLat,bb.maxLng,z);
+  // 地点範囲＋余白で切り出し、比率だけ横長に整える（余白は不足側のみ最小限で追加）
+  let W=(br.x-tl.x)+2*padPx, H=(br.y-tl.y)+2*padPx;
+  if(W/H<minAsp) W=H*minAsp; else if(W/H>maxAsp) H=W/maxAsp;
+  W=Math.round(Math.min(Math.max(W,320),maxW)); H=Math.round(Math.min(Math.max(H,180),maxH));
   const cpx=llToWorldPx(cLat,cLng,z);
-  const x0=cpx.x-W/2, y0=cpx.y-H/2;               // 訓練範囲の中心を画像中央に
+  const x0=cpx.x-W/2, y0=cpx.y-H/2;               // 地点範囲の中心を画像中央に
   const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.fillStyle=(base.u==='seamlessphoto')?'#243b4a':'#cfd8e3'; ctx.fillRect(0,0,W,H);
@@ -1598,9 +1660,8 @@ function renderPlanMapImage(d, opt){
       ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fillStyle=TYPE_COLOR[p.type]||'#888';
       ctx.fill(); ctx.lineWidth=1; ctx.strokeStyle='#fff'; ctx.stroke();
     });
-    // 送水線
-    const s=d.source, relays=[...(d.relays||[])].sort((p,q)=>
-      map.distance([s.lat,s.lng],[p.lat,p.lng])-map.distance([s.lat,s.lng],[q.lat,q.lng]));
+    // 送水線（屈曲点を含む折れ線をそのままの順序で描く）
+    const s=d.source, relays=(d.relays||[]);
     const path=[s,...relays,d.fire].filter(Boolean);
     if(path.length>=2){
       ctx.beginPath(); path.forEach((p,i)=>{ const [x,y]=toXY(p); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
@@ -1613,7 +1674,13 @@ function renderPlanMapImage(d, opt){
       ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,x,y);
     };
     (d.notes||[]).forEach(n=>pin(n,'#e8951b','メ',10));
-    relays.forEach((rl,i)=>pin(rl,'#1f9d55','P'+(i+1),12));
+    let pn=0;
+    relays.forEach(rl=>{
+      if(rl.via){ const [x,y]=toXY(rl);      // 屈曲点は小さな濃紺の点
+        ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fillStyle='#0f2440'; ctx.fill();
+        ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.stroke();
+      } else { pn++; pin(rl,'#1f9d55','P'+pn,12); }
+    });
     if(s) pin(s,'#0067c0','水',14);
     if(d.fire) pin(d.fire,'#e4002b','火',14);
     // 出典
@@ -1635,12 +1702,12 @@ function planToPrintHTML(plan, mapImg){
   if(seg){
     const s=d.source;
     const nodes=[{ic:"💧",label:"水元"+(s.name?"（"+esc(s.name)+"）":""),memo:s.memo}];
-    seg.relays.forEach((r,i)=>nodes.push({ic:"➕",label:"中継ポンプ P"+(i+1),memo:r.memo}));
+    seg.pumpNodes.forEach((r,i)=>nodes.push({ic:"➕",label:"中継ポンプ P"+(i+1),memo:r.memo}));
     nodes.push({ic:"🔥",label:"火点",memo:d.fire.memo});
     nodes.forEach((n,i)=>{
       flow+=`<div class="node"><span class="nic">${n.ic}</span><div class="nb"><b>${n.label}</b>`
           + (n.memo?`<div class="nm">${esc(n.memo)}</div>`:"")+`</div></div>`;
-      if(i<seg.segs.length){ const sg=seg.segs[i];
+      if(i<seg.legs.length){ const sg=seg.legs[i];
         flow+=`<div class="conn"><span class="cl${sg.over?" over":""}">↓ 区間${i+1}　${sg.d}m ／ ${sg.hose}本${sg.over?"　⚠目安超":""}</span></div>`;
       }
     });
@@ -1649,13 +1716,13 @@ function planToPrintHTML(plan, mapImg){
   }
   // 区間表
   let rows="";
-  if(seg) seg.segs.forEach((sg,i)=>{
+  if(seg) seg.legs.forEach((sg,i)=>{
     rows+=`<tr><td>区間${i+1}</td><td>${sg.d} m</td><td>${sg.hose} 本</td><td>${sg.over?"⚠ 目安超":"—"}</td></tr>`;
   });
   // メモ一覧
   const memos=(d.notes||[]).filter(n=>n&&n.memo).map(n=>`<li>${esc(n.memo)}</li>`).join("");
   const summary = seg
-    ? `合計ホース <b>${seg.hose}本</b>　／　可搬ポンプ <b>${seg.pumps}台</b>（水元1＋中継${seg.relays.length}）　／　総延長 約 <b>${seg.total}m</b>`
+    ? `合計ホース <b>${seg.hose}本</b>　／　可搬ポンプ <b>${seg.pumps}台</b>（水元1＋中継${seg.pumpNodes.length}）${seg.vias?`　／　屈曲点 ${seg.vias}`:""}　／　総延長 約 <b>${seg.total}m</b>`
     : `（送水計算なし）`;
   const cond = seg ? `ホース1本 ${seg.hoseLen}m ／ 余裕係数 ${seg.factor} ／ 中継目安 ${seg.legMax}m` : "";
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8">
@@ -1709,7 +1776,7 @@ function planToPrintHTML(plan, mapImg){
     <div class="head"><h1>送水訓練 計画書</h1><span class="sub">本宮市 消防水利マップ</span></div>
     <div class="meta"><div>📅 実施日：<b>${day}</b></div><div>📍 地区：<b>${esc(plan.district||"—")}</b></div><div>🎯 名称：<b>${esc(plan.title||"(無題)")}</b></div></div>
     ${mapImg?`<img class="map" src="${mapImg}" alt="訓練範囲の地図">
-    <div class="legend"><span><i style="background:#0067c0"></i>水元</span><span><i style="background:#1f9d55"></i>中継</span><span><i style="background:#e4002b"></i>火点</span><span><i style="background:#e8951b"></i>メモ</span><span>━ 赤線＝送水ライン</span></div>`:``}
+    <div class="legend"><span><i style="background:#0067c0"></i>水元</span><span><i style="background:#1f9d55"></i>中継</span><span><i style="background:#e4002b"></i>火点</span><span><i style="background:#e8951b"></i>メモ</span><span><i style="background:#0f2440;width:7px;height:7px"></i>屈曲</span><span>━ 赤線＝送水ライン</span></div>`:``}
     <div class="cols">
       <div class="col">
         <h2>送水系統図</h2>
@@ -1736,7 +1803,7 @@ async function exportPlanPDF(plan){
     '<body style="font-family:system-ui,sans-serif;padding:28px;color:#334;font-size:15px">'+
     '🗺 訓練範囲の地図を生成しています…少しお待ちください。</body>');
   let mapImg=null;
-  try{ mapImg = await renderPlanMapImage(plan.data,{w:1080,aspect:2.0}); }catch(e){ mapImg=null; }
+  try{ mapImg = await renderPlanMapImage(plan.data); }catch(e){ mapImg=null; }
   try{
     w.document.open(); w.document.write(planToPrintHTML(plan, mapImg)); w.document.close();
   }catch(e){ toast("PDF画面の生成に失敗しました"); return; }
