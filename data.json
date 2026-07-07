@@ -1,49 +1,7 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-07T01:48:01.189Z",
+  "exportedAt": "2026-07-07T02:45:26.381Z",
   "points": [
-    {
-      "id": "mr9xu6n7a08fd",
-      "type": "消火栓",
-      "name": "【サンプル】本宮駅前 消火栓 No.1",
-      "lat": 37.5118,
-      "lng": 140.3898,
-      "status": "正常",
-      "notes": "例：正常。周囲に障害物なし。",
-      "district": "本宮",
-      "photos": [],
-      "cover": null,
-      "hose": null,
-      "updated": "2026-07-07T00:56:04.387Z"
-    },
-    {
-      "id": "mr9xu6n7jaua4",
-      "type": "消火栓",
-      "name": "【サンプル】市役所東 消火栓 No.2",
-      "lat": 37.5131,
-      "lng": 140.3935,
-      "status": "要点検",
-      "notes": "例：標識ポールがやや傾き。要確認。",
-      "district": "本宮",
-      "photos": [],
-      "cover": null,
-      "hose": null,
-      "updated": "2026-07-07T00:56:04.387Z"
-    },
-    {
-      "id": "mr9xu6n76q00i",
-      "type": "防火水槽",
-      "name": "【サンプル】荒井 防火水槽 40t",
-      "lat": 37.51,
-      "lng": 140.3922,
-      "status": "正常",
-      "notes": "例：吸管投入孔・蓋とも良好。",
-      "district": "荒井",
-      "photos": [],
-      "cover": null,
-      "hose": null,
-      "updated": "2026-07-07T00:56:04.387Z"
-    },
     {
       "id": "mr9zb9seh7yn9",
       "type": "消火栓",
@@ -59,5 +17,67 @@
       "updated": "2026-07-07T01:38:06.030Z"
     }
   ],
-  "plans": []
+  "plans": [
+    {
+      "id": "mra02ic60cm0n",
+      "date": "2026-08-23",
+      "district": "竹重内",
+      "title": "白沢第三・第六合同送水訓練",
+      "createdAt": "2026-07-07T01:58:32.022Z",
+      "data": {
+        "source": {
+          "lat": 37.49306864451277,
+          "lng": 140.48438251018527,
+          "memo": "白沢第三分団 ポンプ車",
+          "memoPos": "right"
+        },
+        "fire": {
+          "lat": 37.49433700339292,
+          "lng": 140.4821589589119,
+          "memo": ""
+        },
+        "relays": [
+          {
+            "lat": 37.49385605105084,
+            "lng": 140.4841974377632,
+            "memo": "第一機関",
+            "memoPos": "right"
+          },
+          {
+            "lat": 37.49458599077802,
+            "lng": 140.48392653465274,
+            "memo": "第二機関",
+            "memoPos": "right"
+          },
+          {
+            "lat": 37.49477113470577,
+            "lng": 140.48302799463275,
+            "memo": "第三機関",
+            "memoPos": "right"
+          }
+        ],
+        "notes": [
+          {
+            "lat": 37.49473282910322,
+            "lng": 140.48256665468216,
+            "memo": "渡辺常男様宅",
+            "memoPos": "top",
+            "memoVertical": false,
+            "fontSize": 11,
+            "bold": false
+          }
+        ],
+        "params": {
+          "hoseLen": 20,
+          "factor": 1.2,
+          "legMax": 200
+        },
+        "view": {
+          "lat": 37.49355811441812,
+          "lng": 140.4835402965546,
+          "z": 17
+        }
+      }
+    }
+  ]
 }
