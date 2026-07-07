@@ -200,7 +200,14 @@
   .sim-btn.ghost{background:rgba(255,255,255,.14); color:#fff}
   .sim-btn.armed{background:var(--hydrant); color:#fff; box-shadow:0 0 0 3px rgba(228,0,43,.3)}
   #simCard{bottom:16px; right:10px; width:250px; overflow:hidden}
-  #simCard .hd{background:var(--hydrant); color:#fff; padding:7px 12px; font-weight:700; font-size:12px}
+  #simCard .hd{background:var(--hydrant); color:#fff; padding:7px 12px; font-weight:700; font-size:12px;
+    cursor:pointer; display:flex; align-items:center; gap:8px; user-select:none}
+  #simCard .hd>span:first-child{flex:none}
+  .sim-mini{flex:1; text-align:right; font-size:11.5px; font-weight:700; color:rgba(255,255,255,.92);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #simCard .hd::after{content:"▾"; font-size:11px; flex:none; transition:transform .2s}
+  #simCard.collapsed .hd::after{transform:rotate(-90deg)}
+  #simCard.collapsed .bd{display:none}
   #simCard .bd{padding:10px 12px}
   .sim-empty{font-size:12px; color:var(--muted); line-height:1.6}
   .sim-readout{font-size:13px; line-height:1.5}
@@ -313,12 +320,17 @@
     #legend .lg{padding:0}
     body.sim-on #legend{display:none}
 
-    /* 訓練カード：下部シート化 */
+    /* 訓練カード：下部シート化＋折りたたみ（畳めば地図が広く見える） */
     #simCard{left:calc(8px + env(safe-area-inset-left)); right:calc(8px + env(safe-area-inset-right));
-      bottom:calc(8px + env(safe-area-inset-bottom)); width:auto; max-height:50vh; overflow-y:auto}
-    /* 訓練ツールバー：折り返して画面内に収める */
+      bottom:calc(8px + env(safe-area-inset-bottom)); width:auto; overflow:hidden}
+    #simCard .hd{padding:10px 12px}          /* 畳んだ時のタップ領域を確保 */
+    #simCard .bd{max-height:38vh; overflow-y:auto; -webkit-overflow-scrolling:touch}
+    /* 訓練ツールバー：横1列スクロールで高さを最小化 */
     #simToolbar{top:calc(8px + env(safe-area-inset-top)); max-width:calc(100vw - 16px);
-      flex-wrap:wrap; justify-content:center; border-radius:16px; row-gap:6px}
+      flex-wrap:nowrap; justify-content:flex-start; overflow-x:auto; overflow-y:hidden;
+      border-radius:14px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+    #simToolbar::-webkit-scrollbar{display:none}
+    #simToolbar .sim-title,#simToolbar .sim-btn{flex:none}
     .sim-btn{padding:9px 13px; font-size:13px}
     .sim-params input{width:52px; padding:6px 6px; font-size:16px}
 
@@ -407,7 +419,7 @@
       <button class="sim-btn ghost" id="simExit">終了</button>
     </div>
     <div class="map-card" id="simCard" style="display:none">
-      <div class="hd">送水シミュレーション</div>
+      <div class="hd" id="simCardHd"><span>送水シミュレーション</span><span id="simMini" class="sim-mini"></span></div>
       <div class="bd">
         <div id="simResult" class="sim-empty">「💧水元」→「🔥火点」の順に地図をタップして配置してください。</div>
         <div class="sim-params">
@@ -1056,8 +1068,13 @@ function simEnter(){
   addMode=false; $('addBtn').classList.remove('active'); $('addHint').classList.remove('show');
   map.getContainer().style.cursor='';
   simLayer.addTo(map); simLabelLayer.addTo(map);   // 訓練レイヤーを表示
+  // スマホでは初期は畳んで地図を広く見せる（見出しの要約で状況は分かる）
+  $('simCard').classList.toggle('collapsed', isMobile());
   simRender();
 }
+function isMobile(){ return window.matchMedia('(max-width:760px)').matches; }
+/* 見出しタップで送水シミュレーションカードを開閉 */
+$('simCardHd').onclick=()=> $('simCard').classList.toggle('collapsed');
 function simExit(){
   sim.active=false; sim.place=null;
   document.body.classList.remove('sim-on');
@@ -1078,6 +1095,8 @@ document.querySelectorAll('.sim-btn[data-place]').forEach(b=>{
     sim.place=arm;
     document.querySelectorAll('.sim-btn[data-place]').forEach(x=>x.classList.toggle('armed', x.dataset.place===arm));
     map.getContainer().style.cursor = arm?'crosshair':'';
+    // 配置ボタンを押したら（＝地図をタップする時）はカードを畳んで地図を最優先
+    if(arm && isMobile()) $('simCard').classList.add('collapsed');
     if(arm) toast(arm==="source"?"💧水元を置く場所をタップ": arm==="fire"?"🔥火点を置く場所をタップ":
                   arm==="note"?"📝メモを置く場所をタップ（連続可）":"➕中継ポンプの場所をタップ（連続可）");
   };
@@ -1215,6 +1234,8 @@ function simRender(){
   if(!path){
     out.className="sim-empty";
     out.innerHTML="「💧水元」→「🔥火点」の順に地図をタップして配置してください。<div id=\"simNotes\" class=\"sim-notes\"></div>";
+    const placed=(sim.source?1:0)+(sim.fire?1:0);
+    $('simMini').textContent = placed ? "配置中…（火点を置くと計算）" : "💧→🔥 を配置";
     updateNotes(); savePrefs(); return;
   }
   simLayer.addLayer(L.polyline(path.map(p=>[p.lat,p.lng]),{color:"#e4002b",weight:4,opacity:.85}));
@@ -1229,6 +1250,7 @@ function simRender(){
     rows+=`<tr><td>区間${i+1}</td><td>${Math.round(d)}m ／ ${h}本</td></tr>`;
   }
   const pumps=1+sim.relays.length;
+  $('simMini').textContent = `🧯${totalHose}本 / 約${Math.round(total)}m ・ P${pumps}`;
   out.className="sim-readout";
   out.innerHTML=
     `<div><span class="big">${totalHose}本</span> のホース（合計 約${Math.round(total)}m）</div>
