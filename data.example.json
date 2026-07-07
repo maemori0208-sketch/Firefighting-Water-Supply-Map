@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "note": "これは共有データのテンプレートです。アプリの「⋯データ → JSON書き出し」で作ったファイルの中身に置き換え、ファイル名を data.json にして index.html と同じ場所に置いてください。points に地点、plans に訓練計画が入ります。",
+  "points": [
+    {
+      "id": "sample1",
+      "type": "消火栓",
+      "name": "（例）本宮駅前 消火栓 No.1",
+      "district": "本宮",
+      "lat": 37.5118,
+      "lng": 140.3898,
+      "status": "正常",
+      "notes": "テンプレート例。実データに置き換えてください。",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "plans": []
+}

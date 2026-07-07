@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>本宮市 消防水利マップ｜消火栓・防火水槽 点検管理</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  :root{
+    --navy:#0f2440; --navy-soft:#1b3a63; --ink:#12202f; --muted:#5d6b7d;
+    --line:#dce3ec; --bg:#eef1f5; --card:#ffffff;
+    --hydrant:#e4002b;      /* 消火栓＝赤 */
+    --cistern:#0067c0;      /* 防火水槽＝青 */
+    --ok:#1f9d55;           /* 正常 */
+    --warn:#e8951b;         /* 要点検 */
+    --broken:#d92d20;       /* 破損 */
+    --unknown:#8a94a6;      /* 未確認 */
+    --shadow:0 2px 10px rgba(15,36,64,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family: system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;
+    color:var(--ink); background:var(--bg); overflow:hidden;
+    -webkit-text-size-adjust:100%;
+  }
+  #app{display:flex; flex-direction:column; height:100dvh}
+
+  /* ---- Header ---- */
+  header{
+    background:var(--navy); color:#fff; display:flex; align-items:center; gap:12px;
+    padding:9px 14px; flex:none; box-shadow:var(--shadow); z-index:1200;
+  }
+  header .mark{width:26px;height:26px;flex:none}
+  header h1{font-size:16px; margin:0; letter-spacing:.02em; font-weight:700; white-space:nowrap}
+  header h1 small{display:block; font-size:10.5px; font-weight:400; color:#aebfd6; letter-spacing:.04em}
+  header .spacer{flex:1}
+  .hbtn{
+    background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.18);
+    border-radius:8px; padding:7px 11px; font-size:12.5px; cursor:pointer; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .hbtn:hover{background:rgba(255,255,255,.2)}
+  .hbtn.primary{background:var(--hydrant); border-color:var(--hydrant)}
+  .hbtn.primary.active{background:#fff; color:var(--hydrant)}
+  #menuToggle{display:none}
+
+  /* ---- Body layout ---- */
+  #main{flex:1; display:flex; min-height:0; position:relative}
+  #sidebar{
+    width:340px; flex:none; background:var(--card); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; min-height:0; z-index:1100;
+  }
+  #map{flex:1; min-width:0; background:#cfd8e3}
+
+  /* ---- Sidebar internals ---- */
+  .panel-pad{padding:12px 14px}
+  .district-bar{display:flex; align-items:center; gap:8px; padding:11px 14px 3px}
+  .dz-label{font-size:12px; font-weight:700; color:var(--navy); white-space:nowrap}
+  #districtSel{flex:1; min-width:0; padding:8px 9px; font-size:13.5px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; font-family:inherit}
+  .dz-go{padding:8px 12px; font-size:12.5px; font-weight:700; color:#fff; background:var(--navy);
+    border:none; border-radius:8px; cursor:pointer; white-space:nowrap}
+  .dz-go:hover{background:var(--navy-soft)}
+  .stats{display:flex; gap:8px; padding:8px 14px 4px}
+  .stat{flex:1; background:var(--bg); border-radius:10px; padding:8px 10px; border:1px solid var(--line)}
+  .stat .n{font-size:20px; font-weight:800; line-height:1}
+  .stat .l{font-size:11px; color:var(--muted); margin-top:3px}
+  .stat.hyd .n{color:var(--hydrant)} .stat.cis .n{color:var(--cistern)}
+
+  .filters{display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px 4px}
+  .chip{
+    font-size:11.5px; padding:5px 10px; border-radius:999px; border:1px solid var(--line);
+    background:#fff; color:var(--muted); cursor:pointer; user-select:none;
+  }
+  .chip.on{background:var(--navy); border-color:var(--navy); color:#fff}
+  #search{
+    width:calc(100% - 28px); margin:6px 14px 2px; padding:8px 10px; font-size:13px;
+    border:1px solid var(--line); border-radius:8px;
+  }
+  #list{flex:1; overflow-y:auto; padding:6px 10px 14px}
+  .item{
+    display:flex; gap:10px; align-items:flex-start; padding:9px 10px; border-radius:10px;
+    cursor:pointer; border:1px solid transparent;
+  }
+  .item:hover{background:var(--bg)}
+  .item.sel{background:#eaf1fb; border-color:#c3d7f2}
+  .item .dot{width:11px;height:11px;border-radius:50%;margin-top:4px;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+  .item .body{flex:1; min-width:0}
+  .item .t{font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:6px}
+  .badge{font-size:10px; padding:1px 6px; border-radius:5px; color:#fff; font-weight:700}
+  .badge.hyd{background:var(--hydrant)} .badge.cis{background:var(--cistern)}
+  .item .s{font-size:11.5px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .st-pill{font-size:10.5px; padding:1px 7px; border-radius:999px; color:#fff; font-weight:700}
+  .empty{color:var(--muted); font-size:12.5px; text-align:center; padding:30px 16px; line-height:1.7}
+
+  /* ---- Map layer control card ---- */
+  .map-card{
+    position:absolute; z-index:1000; background:var(--card); border-radius:12px;
+    box-shadow:var(--shadow); border:1px solid var(--line); font-size:12.5px;
+  }
+  #layerCard{top:10px; right:10px; width:210px; overflow:hidden}
+  #layerCard .hd{background:var(--navy-soft); color:#fff; padding:7px 12px; font-weight:700; font-size:12px}
+  #layerCard .bd{padding:8px 12px 10px}
+  .row{display:flex; align-items:center; gap:8px; padding:4px 0}
+  .row label{flex:1; cursor:pointer}
+  .row input[type=checkbox]{width:16px;height:16px;accent-color:var(--navy)}
+  .seg{display:flex; gap:4px; margin-top:2px}
+  .seg button{flex:1; font-size:11px; padding:4px 0; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer}
+  .seg button.on{background:var(--navy); color:#fff; border-color:var(--navy)}
+  .swatch{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:2px; vertical-align:-1px}
+
+  #legend{bottom:16px; left:10px; padding:8px 12px}
+  #legend .lg{display:flex; align-items:center; gap:7px; padding:2px 0; font-size:11.5px}
+  #legend .k{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
+
+  /* add-mode hint */
+  #addHint{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1000;
+    background:var(--hydrant); color:#fff; padding:8px 16px; border-radius:999px;
+    font-size:13px; font-weight:600; box-shadow:var(--shadow); display:none;
+  }
+  #addHint.show{display:block}
+
+  /* ---- Editor drawer ---- */
+  #editor{
+    position:absolute; top:0; right:0; height:100%; width:380px; max-width:92vw;
+    background:var(--card); box-shadow:-4px 0 24px rgba(15,36,64,.18); z-index:1300;
+    transform:translateX(105%); transition:transform .25s ease; display:flex; flex-direction:column;
+  }
+  #editor.open{transform:none}
+  #editor .ed-hd{background:var(--navy); color:#fff; padding:12px 16px; display:flex; align-items:center; gap:10px}
+  #editor .ed-hd h2{font-size:15px; margin:0; flex:1}
+  #editor .ed-hd button{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+  #editor .ed-bd{flex:1; overflow-y:auto; padding:14px 16px 90px}
+  .fld{margin-bottom:13px}
+  .fld label{display:block; font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:5px; letter-spacing:.02em}
+  .fld input[type=text],.fld input[type=number],.fld textarea,.fld select{
+    width:100%; padding:9px 10px; font-size:14px; border:1px solid var(--line); border-radius:8px; font-family:inherit;
+  }
+  .fld textarea{resize:vertical; min-height:66px}
+  .two{display:flex; gap:10px} .two>div{flex:1}
+  .typebtns,.statusbtns{display:flex; gap:6px; flex-wrap:wrap}
+  .tbtn{flex:1; min-width:0; padding:9px 4px; border:2px solid var(--line); border-radius:9px; background:#fff; cursor:pointer; font-size:13px; font-weight:600; text-align:center}
+  .tbtn.on-hyd{border-color:var(--hydrant); background:#fdeaee; color:var(--hydrant)}
+  .tbtn.on-cis{border-color:var(--cistern); background:#e7f1fb; color:var(--cistern)}
+  .sbtn{flex:1; min-width:calc(50% - 3px); padding:8px 4px; border:2px solid var(--line); border-radius:9px; background:#fff; cursor:pointer; font-size:12.5px; font-weight:700}
+  .sbtn.on{color:#fff}
+  .sbtn.on[data-v="正常"]{background:var(--ok);border-color:var(--ok)}
+  .sbtn.on[data-v="要点検"]{background:var(--warn);border-color:var(--warn)}
+  .sbtn.on[data-v="破損"]{background:var(--broken);border-color:var(--broken)}
+  .sbtn.on[data-v="未確認"]{background:var(--unknown);border-color:var(--unknown)}
+
+  .photos{display:flex; flex-wrap:wrap; gap:8px}
+  .photo{position:relative; width:82px; height:82px; border-radius:8px; overflow:hidden; border:1px solid var(--line)}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo button{position:absolute; top:2px; right:2px; width:20px;height:20px;border-radius:50%; border:none; background:rgba(217,45,32,.92); color:#fff; cursor:pointer; font-size:13px; line-height:20px; padding:0}
+  .addphoto{width:82px;height:82px;border:2px dashed var(--line); border-radius:8px; display:flex;align-items:center;justify-content:center; flex-direction:column; gap:3px; color:var(--muted); font-size:11px; cursor:pointer; background:#fafbfc}
+  .addphoto span{font-size:22px;line-height:1}
+
+  .ed-ft{position:absolute; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line); padding:10px 16px; display:flex; gap:10px}
+  .btn{flex:1; padding:11px; border-radius:9px; border:none; font-size:14px; font-weight:700; cursor:pointer}
+  .btn.save{background:var(--navy); color:#fff}
+  .btn.del{background:#fff; color:var(--broken); border:1px solid var(--broken); flex:0 0 auto; padding:11px 16px}
+  .locbtn{width:100%; padding:9px; border:1px dashed var(--navy-soft); border-radius:8px; background:#f2f6fc; color:var(--navy); font-size:12.5px; font-weight:600; cursor:pointer}
+
+  .backdrop{position:absolute; inset:0; background:rgba(15,36,64,.35); z-index:1250; display:none}
+  .backdrop.show{display:block}
+
+  /* Leaflet custom markers */
+  .pin{position:relative; width:30px; height:30px}
+  .pin .glyph{
+    position:absolute; inset:0; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+    box-shadow:0 2px 5px rgba(0,0,0,.35); border:2px solid #fff;
+  }
+  .pin .ico{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:13px; font-weight:800; z-index:2}
+  .pin .ring{position:absolute; left:50%; bottom:-4px; transform:translateX(-50%);
+    width:8px;height:8px;border-radius:50%;border:2px solid #fff;z-index:3}
+
+  /* toast */
+  /* 訓練シミュレーション */
+  #simToolbar{position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1000;
+    background:var(--navy); border-radius:999px; padding:6px 8px; display:none; gap:6px; align-items:center;
+    box-shadow:var(--shadow)}
+  #simToolbar.show{display:flex}
+  #simToolbar .sim-title{color:#fff; font-size:12.5px; font-weight:700; padding:0 6px 0 8px; white-space:nowrap}
+  .sim-btn{border:none; border-radius:999px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer;
+    background:#fff; color:var(--navy); white-space:nowrap}
+  .sim-btn.ghost{background:rgba(255,255,255,.14); color:#fff}
+  .sim-btn.armed{background:var(--hydrant); color:#fff; box-shadow:0 0 0 3px rgba(228,0,43,.3)}
+  #simCard{bottom:16px; right:10px; width:250px; overflow:hidden}
+  #simCard .hd{background:var(--hydrant); color:#fff; padding:7px 12px; font-weight:700; font-size:12px}
+  #simCard .bd{padding:10px 12px}
+  .sim-empty{font-size:12px; color:var(--muted); line-height:1.6}
+  .sim-readout{font-size:13px; line-height:1.5}
+  .sim-readout .big{font-size:15px; font-weight:800; color:var(--navy)}
+  .sim-readout .warn{color:var(--broken); font-weight:700; font-size:11.5px; margin-top:5px; line-height:1.5}
+  .sim-readout table{width:100%; border-collapse:collapse; margin-top:7px; font-size:11.5px}
+  .sim-readout td{padding:2px 3px; border-top:1px solid var(--line)}
+  .sim-readout td:last-child{text-align:right; font-variant-numeric:tabular-nums}
+  .sim-params{display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:9px; padding-top:8px; border-top:1px dashed var(--line); font-size:11px; color:var(--muted)}
+  .sim-params label{display:flex; align-items:center; gap:3px}
+  .sim-params input{width:46px; padding:3px 5px; border:1px solid var(--line); border-radius:5px; font-size:11.5px}
+  .sim-pin{display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%;
+    border:3px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.4); font-size:15px; font-weight:800; color:#fff}
+  .sim-src{background:#0067c0} .sim-fire{background:#e4002b} .sim-relay{background:#1f9d55; font-size:13px}
+  .sim-note{background:#e8951b; font-size:14px}
+  .seg-label{background:rgba(15,36,64,.9); color:#fff; font-size:11px; font-weight:700; padding:2px 7px;
+    border-radius:999px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  .sim-pop b{font-size:13px; color:var(--navy)}
+  .sim-memo{width:100%; margin-top:7px; border:1px solid var(--line); border-radius:6px; padding:6px;
+    font-family:inherit; font-size:12.5px; resize:vertical; box-sizing:border-box}
+  .sim-pop-ft{display:flex; gap:6px; margin-top:7px}
+  .sim-pop-save{flex:1; background:var(--navy); color:#fff; border:none; border-radius:6px; padding:7px;
+    font-size:12.5px; font-weight:700; cursor:pointer}
+  .sim-pop-del{background:#fff; color:var(--broken); border:1px solid var(--broken); border-radius:6px;
+    padding:7px 12px; font-size:12.5px; cursor:pointer}
+  /* 自前メモラベル（縦横をCSSで確実に制御） */
+  .memo-wrap{background:none!important;border:none!important}
+  .memo-lbl{position:absolute; top:0; left:0; background:rgba(255,255,255,.96);
+    border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.25);
+    font-size:11px; font-weight:600; color:var(--ink); pointer-events:none;}
+  .memo-lbl.h{writing-mode:horizontal-tb; white-space:nowrap; width:max-content; padding:3px 7px; line-height:1.35}
+  .memo-lbl.v{writing-mode:vertical-rl; text-orientation:upright; white-space:nowrap;
+    letter-spacing:1px; padding:6px 4px; line-height:1.4}
+  .memo-lbl[data-dir="bottom"]{transform:translate(-50%, 20px)}
+  .memo-lbl[data-dir="top"]{transform:translate(-50%, calc(-100% - 20px))}
+  .memo-lbl[data-dir="right"]{transform:translate(20px, -50%)}
+  .memo-lbl[data-dir="left"]{transform:translate(calc(-100% - 20px), -50%)}
+
+  /* 訓練計画ライブラリ */
+  #planOpen{width:100%; margin-top:9px; padding:8px; border:1px solid var(--navy); background:#f2f6fc;
+    color:var(--navy); font-size:12.5px; font-weight:700; border-radius:8px; cursor:pointer}
+  #planOpen:hover{background:#e7f0fb}
+  #planLib{position:absolute; top:0; right:0; height:100%; width:380px; max-width:92vw;
+    background:var(--card); box-shadow:-4px 0 24px rgba(15,36,64,.18); z-index:1300;
+    transform:translateX(105%); transition:transform .25s ease; display:flex; flex-direction:column}
+  #planLib.open{transform:none}
+  .plan-save{padding-bottom:12px; border-bottom:1px solid var(--line)}
+  .plan-hist-hd{font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 8px; letter-spacing:.02em}
+  .plan-item{border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px}
+  .plan-item .pi-top{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+  .plan-item .pi-date{font-size:13px; font-weight:800; color:var(--navy)}
+  .plan-item .pi-dist{font-size:11px; font-weight:700; color:#fff; background:var(--navy-soft); padding:1px 7px; border-radius:999px}
+  .plan-item .pi-title{font-size:13px; margin-top:3px}
+  .plan-item .pi-sum{font-size:11px; color:var(--muted); margin-top:3px}
+  .plan-item .pi-ft{display:flex; gap:8px; margin-top:9px}
+  .plan-item .pi-ft button{flex:0 0 auto; padding:7px 12px; border-radius:7px; font-size:12.5px; font-weight:700; cursor:pointer; border:1px solid var(--line); background:#fff}
+  .plan-item .pi-open{flex:1!important; background:var(--navy)!important; color:#fff; border-color:var(--navy)!important}
+  .plan-item .pi-over{color:var(--warn); border-color:var(--warn)!important}
+  .plan-item .pi-del{color:var(--broken); border-color:var(--broken)!important}
+  .plan-empty{color:var(--muted); font-size:12.5px; text-align:center; padding:24px 12px; line-height:1.7}
+  .sim-pop-row{display:flex; align-items:center; gap:4px; margin-top:7px}
+  .sim-pop-row>span{font-size:11px; color:var(--muted); width:26px; flex:none}
+  .sim-pop-row .mp,.sim-pop-row .mo,.sim-pop-row .mz,.sim-pop-row .mb{flex:1; padding:5px 0; font-size:11.5px; border:1px solid var(--line);
+    background:#fff; border-radius:6px; cursor:pointer; color:var(--ink)}
+  .sim-pop-row .mp.on,.sim-pop-row .mo.on,.sim-pop-row .mz.on,.sim-pop-row .mb.on{background:var(--navy); color:#fff; border-color:var(--navy)}
+  .sim-pop-row .mb{font-weight:800}
+  .sim-notes{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:11.5px; line-height:1.55}
+  .sim-notes div{margin-top:2px}
+
+  #toast{position:absolute; bottom:70px; left:50%; transform:translateX(-50%); z-index:1400;
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px; font-size:13px;
+    opacity:0; transition:opacity .25s; pointer-events:none; box-shadow:var(--shadow)}
+  #toast.show{opacity:1}
+
+  .file-hidden{display:none}
+  .leaflet-popup-content{font-size:13px; line-height:1.6}
+  .leaflet-popup-content b{font-size:14px}
+
+  /* Responsive */
+  @media(max-width:760px){
+    #menuToggle{display:inline-flex}
+    header h1{font-size:14px}
+    #sidebar{position:absolute; top:0; left:0; height:100%; width:86vw; max-width:340px;
+      transform:translateX(-105%); transition:transform .25s; box-shadow:var(--shadow)}
+    #sidebar.open{transform:none}
+    #layerCard{width:184px}
+    #legend{bottom:12px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="menuToggle" class="hbtn" title="一覧">☰</button>
+    <svg class="mark" viewBox="0 0 24 24" fill="none"><path d="M12 2C8 6 6 9 6 13a6 6 0 0012 0c0-4-2-7-6-11z" fill="#e4002b" stroke="#fff" stroke-width="1.2"/></svg>
+    <h1>本宮市 消防水利マップ<small>消火栓・防火水槽　配置／点検管理</small></h1>
+    <div class="spacer"></div>
+    <button id="addBtn" class="hbtn primary" title="地図をタップして地点を追加">＋ 地点を追加</button>
+    <button id="simBtn" class="hbtn" title="水元・火点を置いて訓練を計画">🎓 訓練</button>
+    <button id="gpsBtn" class="hbtn" title="現在地へ移動">📍 現在地</button>
+    <button id="menuData" class="hbtn" title="保存・読込">⋯ データ</button>
+  </header>
+
+  <div id="main">
+    <aside id="sidebar">
+      <div class="district-bar">
+        <span class="dz-label">🎯 地区</span>
+        <select id="districtSel" title="地区を選ぶと絞り込み＆その範囲へ移動します">
+          <option value="all">すべての地区</option>
+        </select>
+        <button id="districtFocus" class="dz-go" title="この地区へ移動">移動</button>
+      </div>
+      <div class="stats">
+        <div class="stat hyd"><div class="n" id="stHyd">0</div><div class="l">消火栓</div></div>
+        <div class="stat cis"><div class="n" id="stCis">0</div><div class="l">防火水槽</div></div>
+        <div class="stat"><div class="n" id="stBad" style="color:var(--broken)">0</div><div class="l">要点検・破損</div></div>
+      </div>
+      <div class="filters" id="typeFilters">
+        <span class="chip on" data-f="type" data-v="all">すべて</span>
+        <span class="chip" data-f="type" data-v="消火栓">消火栓</span>
+        <span class="chip" data-f="type" data-v="防火水槽">防火水槽</span>
+      </div>
+      <div class="filters" id="statusFilters">
+        <span class="chip on" data-f="status" data-v="all">状態:全</span>
+        <span class="chip" data-f="status" data-v="正常">正常</span>
+        <span class="chip" data-f="status" data-v="要点検">要点検</span>
+        <span class="chip" data-f="status" data-v="破損">破損</span>
+        <span class="chip" data-f="status" data-v="未確認">未確認</span>
+      </div>
+      <input id="search" type="text" placeholder="🔍 名称・メモで検索">
+      <div id="list"></div>
+    </aside>
+
+    <div id="map"></div>
+
+    <div id="addHint">地図上の設置場所をタップしてください（もう一度「地点を追加」で解除）</div>
+
+    <!-- 訓練シミュレーション -->
+    <div id="simToolbar">
+      <span class="sim-title">🎓 訓練計画</span>
+      <button class="sim-btn" data-place="source">💧 水元</button>
+      <button class="sim-btn" data-place="fire">🔥 火点</button>
+      <button class="sim-btn" data-place="relay">➕ 中継</button>
+      <button class="sim-btn" data-place="note">📝 メモ</button>
+      <button class="sim-btn ghost" id="simClear">やり直し</button>
+      <button class="sim-btn ghost" id="simExit">終了</button>
+    </div>
+    <div class="map-card" id="simCard" style="display:none">
+      <div class="hd">送水シミュレーション</div>
+      <div class="bd">
+        <div id="simResult" class="sim-empty">「💧水元」→「🔥火点」の順に地図をタップして配置してください。</div>
+        <div class="sim-params">
+          <label>ホース1本 <input type="number" id="simHose" value="20" min="10" step="5">m</label>
+          <label>余裕係数 <input type="number" id="simFactor" value="1.2" min="1" max="2" step="0.1"></label>
+          <label>中継目安 <input type="number" id="simLeg" value="200" min="40" step="20">m</label>
+        </div>
+        <button id="planOpen">🗂 計画を保存・履歴</button>
+      </div>
+    </div>
+
+    <div class="map-card" id="layerCard">
+      <div class="hd">表示レイヤー</div>
+      <div class="bd">
+        <div class="row"><input type="checkbox" id="lyBase2" ><label for="lyBase2">背景を淡色地図に</label></div>
+        <div class="row"><input type="checkbox" id="lyPhoto" ><label for="lyPhoto">航空写真</label></div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:6px 0">
+        <div class="row"><input type="checkbox" id="lyCover" checked><label for="lyCover"><span class="swatch" style="background:rgba(15,103,192,.18);border:1px solid var(--cistern)"></span>水利基準円</label></div>
+        <div class="seg" id="coverSeg">
+          <button data-r="100" >100m</button>
+          <button data-r="120" >120m</button>
+          <button data-r="140" class="on">140m</button>
+        </div>
+        <div class="row" style="margin-top:8px"><input type="checkbox" id="lyHose" ><label for="lyHose"><span class="swatch" style="background:rgba(228,0,43,.12);border:1px solid var(--hydrant)"></span>ホース展張円</label></div>
+        <div class="row"><label style="flex:1">半径 <input type="number" id="hoseR" value="200" min="20" step="20" style="width:64px;padding:3px 6px;border:1px solid var(--line);border-radius:6px"> m</label></div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:6px 0">
+        <div class="row"><input type="checkbox" id="lyRisk"><label for="lyRisk">🔥 水利空白（火災リスク）</label></div>
+        <div id="riskLegend" style="display:none;font-size:10.5px;color:var(--muted);line-height:1.7;padding:2px 0 0">
+          <div><span class="swatch" style="background:rgba(255,210,30,.55)"></span>やや遠い（基準〜1.5倍）</div>
+          <div><span class="swatch" style="background:rgba(255,140,26,.7)"></span>遠い（1.5〜2.5倍）</div>
+          <div><span class="swatch" style="background:rgba(228,0,43,.7)"></span>水利空白（2.5倍超）</div>
+          <div style="margin-top:2px">※破損した水利は除いて判定</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-card" id="legend">
+      <div class="lg"><span class="k" style="background:var(--ok)"></span>正常</div>
+      <div class="lg"><span class="k" style="background:var(--warn)"></span>要点検</div>
+      <div class="lg"><span class="k" style="background:var(--broken)"></span>破損</div>
+      <div class="lg"><span class="k" style="background:var(--unknown)"></span>未確認</div>
+    </div>
+
+    <!-- Editor drawer -->
+    <div class="backdrop" id="backdrop"></div>
+    <div id="editor">
+      <div class="ed-hd"><h2 id="edTitle">地点の編集</h2><button id="edClose">×</button></div>
+      <div class="ed-bd">
+        <div class="fld">
+          <label>種別</label>
+          <div class="typebtns" id="edType">
+            <div class="tbtn" data-v="消火栓">🔥 消火栓</div>
+            <div class="tbtn" data-v="防火水槽">💧 防火水槽</div>
+          </div>
+        </div>
+        <div class="fld">
+          <label>名称・管理番号</label>
+          <input type="text" id="edName" placeholder="例）本宮○○地内　消火栓 No.12">
+        </div>
+        <div class="fld">
+          <label>地区（大字）</label>
+          <input type="text" id="edDistrict" list="districtList" placeholder="例）荒井 ／ 松沢 ／ 本宮">
+          <datalist id="districtList"></datalist>
+        </div>
+        <div class="fld">
+          <label>状態</label>
+          <div class="statusbtns" id="edStatus">
+            <div class="sbtn" data-v="正常">正常</div>
+            <div class="sbtn" data-v="要点検">要点検</div>
+            <div class="sbtn" data-v="破損">破損</div>
+            <div class="sbtn" data-v="未確認">未確認</div>
+          </div>
+        </div>
+        <div class="fld">
+          <label>破損・現状メモ</label>
+          <textarea id="edNotes" placeholder="例）蓋の縁が欠損、標識ポール傾き、周囲に駐車で部署困難 等"></textarea>
+        </div>
+        <div class="fld">
+          <label>現況写真</label>
+          <div class="photos" id="edPhotos"></div>
+        </div>
+        <div class="two">
+          <div class="fld"><label>緯度</label><input type="number" id="edLat" step="0.000001"></div>
+          <div class="fld"><label>経度</label><input type="number" id="edLng" step="0.000001"></div>
+        </div>
+        <div class="fld">
+          <button class="locbtn" id="edUseGps">📍 現在地の座標を取り込む</button>
+        </div>
+        <div class="two">
+          <div class="fld"><label>水利基準円 半径(m)</label><input type="number" id="edCover" step="10" placeholder="140"></div>
+          <div class="fld"><label>ホース展張 半径(m)</label><input type="number" id="edHose" step="20" placeholder="200"></div>
+        </div>
+        <div class="fld" style="font-size:11px;color:var(--muted)">更新: <span id="edUpdated">—</span></div>
+      </div>
+      <div class="ed-ft">
+        <button class="btn del" id="edDelete">削除</button>
+        <button class="btn save" id="edSave">保存</button>
+      </div>
+    </div>
+
+    <!-- 訓練計画ライブラリ -->
+    <div class="backdrop" id="planBackdrop"></div>
+    <div id="planLib">
+      <div class="ed-hd"><h2>🗂 訓練計画（日付で保存・振り返り）</h2><button id="planClose">×</button></div>
+      <div class="ed-bd">
+        <div class="plan-save">
+          <div class="two">
+            <div class="fld"><label>実施日</label><input type="date" id="planDate"></div>
+            <div class="fld"><label>地区</label><input type="text" id="planDistrict" list="districtList" placeholder="例）荒井"></div>
+          </div>
+          <div class="fld"><label>名称・目的</label><input type="text" id="planTitle" placeholder="例）荒井地区 中継送水訓練"></div>
+          <button class="btn save" id="planSaveBtn" style="width:100%">新規に保存</button>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">水元・火点・中継・メモ・各設定をまとめて記録します。</div>
+        </div>
+        <div class="plan-hist-hd">保存済みの計画</div>
+        <div id="planList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileImport" accept="application/json,.json" class="file-hidden">
+<input type="file" id="photoInput" accept="image/*" capture="environment" multiple class="file-hidden">
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+"use strict";
+/* ============ 定数・状態 ============ */
+const STATUS = ["正常","要点検","破損","未確認"];
+const STATUS_COLOR = {"正常":"#1f9d55","要点検":"#e8951b","破損":"#d92d20","未確認":"#8a94a6"};
+const TYPE_COLOR = {"消火栓":"#e4002b","防火水槽":"#0067c0"};
+const STORE_KEY = "motomiya_suiri_v1";
+const PREFS_KEY = "motomiya_suiri_prefs_v1";
+const $ = id => document.getElementById(id);
+let restoring = false; // 復元中はprefsを書き込まない
+const CENTER = [37.5126, 140.3919]; // 本宮市役所付近
+// 本宮市の地区（大字）。データに無い地区も選べるよう初期リストとして用意
+const DISTRICTS = ["本宮","青田","荒井","稲沢","岩根","白岩","関下","高木","長屋","仁井田","糠沢","松沢","和田"];
+let points = [];
+let filter = {type:"all", status:"all", q:"", district:"all"};
+let selectedId = null;
+let addMode = false;
+let editing = null; // 作業中コピー
+
+/* ============ 地図 ============ */
+const map = L.map('map',{zoomControl:true, attributionControl:true}).setView(CENTER, 15);
+const gsiStd = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
+  {maxZoom:18, attribution:"地理院タイル"});
+const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+  {maxZoom:18, attribution:"地理院タイル"});
+const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+  {maxZoom:18, attribution:"地理院タイル（シームレス空中写真）"});
+gsiStd.addTo(map);
+
+const markerLayer = L.layerGroup().addTo(map);
+const coverLayer  = L.layerGroup().addTo(map);
+const hoseLayer   = L.layerGroup();
+const riskLayer   = L.layerGroup();
+const simLayer    = L.layerGroup();
+const simLabelLayer = L.layerGroup();
+
+/* ============ ストレージ ============ */
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(points)); }
+  catch(e){ toast("⚠ 保存容量オーバーの可能性。JSON書き出しでバックアップを"); }
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){ points = JSON.parse(raw); return true; }
+  }catch(e){}
+  return false;
+}
+
+/* ============ サンプルデータ ============ */
+function seed(){
+  points = [
+    mk("消火栓","【サンプル】本宮駅前 消火栓 No.1",37.5118,140.3898,"正常","例：正常。周囲に障害物なし。","本宮"),
+    mk("消火栓","【サンプル】市役所東 消火栓 No.2",37.5131,140.3935,"要点検","例：標識ポールがやや傾き。要確認。","本宮"),
+    mk("防火水槽","【サンプル】荒井 防火水槽 40t",37.5100,140.3922,"正常","例：吸管投入孔・蓋とも良好。","荒井"),
+    mk("防火水槽","【サンプル】松沢 防火水槽",37.5085,140.3955,"破損","例：マンホール蓋の縁欠損。転落注意。要修繕。","松沢"),
+  ];
+  save();
+}
+function mk(type,name,lat,lng,status,notes,district){
+  return {id:uid(), type, name, lat, lng, status, notes:notes||"", district:district||"",
+    photos:[], cover:null, hose:null, updated:new Date().toISOString()};
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ============ マーカー描画 ============ */
+function makeIcon(p){
+  const col = TYPE_COLOR[p.type];
+  const stc = STATUS_COLOR[p.status] || STATUS_COLOR["未確認"];
+  const glyph = p.type==="消火栓" ? "H" : "水";
+  const html =
+    `<div class="pin">
+       <div class="glyph" style="background:${col}"></div>
+       <div class="ico">${glyph}</div>
+       <div class="ring" style="background:${stc}"></div>
+     </div>`;
+  return L.divIcon({className:"", html, iconSize:[30,30], iconAnchor:[15,28], popupAnchor:[0,-26]});
+}
+function coverRadius(p){ return p.cover!=null ? p.cover : globalCover; }
+function hoseRadius(p){ return p.hose!=null ? p.hose : (parseInt(document.getElementById('hoseR').value)||200); }
+
+function render(){
+  markerLayer.clearLayers(); coverLayer.clearLayers(); hoseLayer.clearLayers();
+  const shown = points.filter(passFilter);
+  shown.forEach(p=>{
+    const m = L.marker([p.lat,p.lng],{icon:makeIcon(p)});
+    m.on('click',()=>openEditor(p.id));
+    m.bindTooltip(p.name||"(無名)",{direction:'top',offset:[0,-24]});
+    markerLayer.addLayer(m);
+
+    coverLayer.addLayer(L.circle([p.lat,p.lng],{radius:coverRadius(p),
+      color:TYPE_COLOR[p.type], weight:1, fillColor:TYPE_COLOR[p.type], fillOpacity:.08, dashArray:"4 3"}));
+    hoseLayer.addLayer(L.circle([p.lat,p.lng],{radius:hoseRadius(p),
+      color:"#e4002b", weight:1, fillColor:"#e4002b", fillOpacity:.06}));
+  });
+  renderList(shown);
+  renderStats();
+  buildDistrictOptions();
+  if(document.getElementById('lyRisk') && document.getElementById('lyRisk').checked) computeRisk();
+}
+
+/* ============ 地区セレクター ============ */
+function allDistricts(){
+  const inData = points.map(p=>p.district).filter(Boolean);
+  return [...new Set([...DISTRICTS, ...inData])];
+}
+function buildDistrictOptions(){
+  const sel=document.getElementById('districtSel');
+  const cur=filter.district;
+  const list=allDistricts();
+  sel.innerHTML='<option value="all">すべての地区</option>'+
+    list.map(d=>{
+      const n=points.filter(p=>p.district===d).length;
+      return `<option value="${escapeHtml(d)}">${escapeHtml(d)}${n?`（${n}）`:""}</option>`;
+    }).join("");
+  sel.value = list.includes(cur)||cur==="all" ? cur : "all";
+  // エディタ用の候補も更新
+  document.getElementById('districtList').innerHTML =
+    list.map(d=>`<option value="${escapeHtml(d)}">`).join("");
+}
+document.getElementById('districtSel').onchange=e=>{
+  filter.district=e.target.value; render(); savePrefs();
+  if(filter.district!=="all") focusDistrict(filter.district);
+  closeSidebarMobile();
+};
+document.getElementById('districtFocus').onclick=()=>{
+  if(filter.district!=="all") focusDistrict(filter.district);
+  else toast("地区を選んでください");
+};
+function focusDistrict(name){
+  const pts=points.filter(p=>p.district===name);
+  if(pts.length){
+    const b=L.latLngBounds(pts.map(p=>[p.lat,p.lng]));
+    map.fitBounds(b,{padding:[70,70], maxZoom:17});
+  }else{
+    geocodeDistrict(name);
+  }
+}
+/* 地区に地点が無いときは国土地理院の住所検索で位置を取得して移動 */
+const geoCache={};
+async function geocodeDistrict(name){
+  if(geoCache[name]){ map.setView(geoCache[name],15); toast(name+"へ移動（登録地点なし）"); return; }
+  try{
+    const url="https://msearch.gsi.go.jp/address-search/AddressSearch?q="+encodeURIComponent("福島県本宮市"+name);
+    const res=await fetch(url);
+    const j=await res.json();
+    if(Array.isArray(j)&&j.length&&j[0].geometry){
+      const c=j[0].geometry.coordinates; // [lng,lat]
+      const ll=[c[1],c[0]]; geoCache[name]=ll;
+      map.setView(ll,15); toast(name+"へ移動（登録地点なし）");
+    }else{ toast(name+"：この地区にはまだ地点がありません"); }
+  }catch(e){ toast(name+"：地点未登録（位置検索も利用できません）"); }
+}
+function passFilter(p){
+  if(filter.type!=="all" && p.type!==filter.type) return false;
+  if(filter.status!=="all" && p.status!==filter.status) return false;
+  if(filter.district!=="all" && (p.district||"")!==filter.district) return false;
+  if(filter.q){
+    const q=filter.q.toLowerCase();
+    if(!((p.name||"")+" "+(p.notes||"")).toLowerCase().includes(q)) return false;
+  }
+  return true;
+}
+function renderStats(){
+  document.getElementById('stHyd').textContent = points.filter(p=>p.type==="消火栓").length;
+  document.getElementById('stCis').textContent = points.filter(p=>p.type==="防火水槽").length;
+  document.getElementById('stBad').textContent = points.filter(p=>p.status==="要点検"||p.status==="破損").length;
+}
+function renderList(shown){
+  const el = document.getElementById('list');
+  if(!shown.length){
+    el.innerHTML = `<div class="empty">該当する地点がありません。<br>ヘッダーの「＋ 地点を追加」から<br>地図をタップして登録できます。</div>`;
+    return;
+  }
+  el.innerHTML="";
+  shown.forEach(p=>{
+    const d=document.createElement('div');
+    d.className="item"+(p.id===selectedId?" sel":"");
+    d.innerHTML=
+      `<span class="dot" style="background:${STATUS_COLOR[p.status]}"></span>
+       <div class="body">
+         <div class="t"><span class="badge ${p.type==="消火栓"?"hyd":"cis"}">${p.type==="消火栓"?"消火栓":"水槽"}</span>${escapeHtml(p.name||"(無名)")}</div>
+         <div class="s">${p.district?`【${escapeHtml(p.district)}】`:""}${escapeHtml(p.notes||"メモなし")}</div>
+       </div>
+       <span class="st-pill" style="background:${STATUS_COLOR[p.status]}">${p.status}</span>`;
+    d.onclick=()=>{ map.setView([p.lat,p.lng], Math.max(map.getZoom(),16)); openEditor(p.id); closeSidebarMobile(); };
+    el.appendChild(d);
+  });
+}
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* ============ フィルタUI ============ */
+let globalCover = 140;
+document.querySelectorAll('.chip').forEach(ch=>{
+  ch.onclick=()=>{
+    const f=ch.dataset.f;
+    ch.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+    ch.classList.add('on');
+    filter[f]=ch.dataset.v; render(); savePrefs();
+  };
+});
+document.getElementById('search').oninput=e=>{ filter.q=e.target.value.trim(); render(); savePrefs(); };
+
+/* ============ レイヤー切替 ============ */
+document.getElementById('lyBase2').onchange=e=>{
+  if(e.target.checked){ map.removeLayer(gsiStd); if(!document.getElementById('lyPhoto').checked) gsiPale.addTo(map); }
+  else{ map.removeLayer(gsiPale); if(!document.getElementById('lyPhoto').checked) gsiStd.addTo(map); }
+  savePrefs();
+};
+document.getElementById('lyPhoto').onchange=e=>{
+  if(e.target.checked){ map.removeLayer(gsiStd); map.removeLayer(gsiPale); gsiPhoto.addTo(map); }
+  else{ map.removeLayer(gsiPhoto);
+    (document.getElementById('lyBase2').checked?gsiPale:gsiStd).addTo(map); }
+  savePrefs();
+};
+document.getElementById('lyCover').onchange=e=>{ e.target.checked?coverLayer.addTo(map):map.removeLayer(coverLayer); savePrefs(); };
+document.getElementById('lyHose').onchange=e=>{ e.target.checked?hoseLayer.addTo(map):map.removeLayer(hoseLayer); savePrefs(); };
+document.querySelectorAll('#coverSeg button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#coverSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); globalCover=parseInt(b.dataset.r); render(); savePrefs();
+  };
+});
+document.getElementById('hoseR').oninput=()=>{ render(); savePrefs(); };
+
+/* ============ 追加モード ============ */
+const addBtn=document.getElementById('addBtn');
+addBtn.onclick=()=>{
+  if(sim.active) simExit();
+  addMode=!addMode;
+  addBtn.classList.toggle('active',addMode);
+  document.getElementById('addHint').classList.toggle('show',addMode);
+  map.getContainer().style.cursor = addMode?'crosshair':'';
+};
+map.on('click',e=>{
+  if(sim.active){ if(sim.place) simPlace(e.latlng); return; }
+  if(!addMode) return;
+  const p = mk("消火栓","", e.latlng.lat, e.latlng.lng, "未確認","");
+  p.name="";
+  points.push(p); save(); render();
+  addMode=false; addBtn.classList.remove('active');
+  document.getElementById('addHint').classList.remove('show');
+  map.getContainer().style.cursor='';
+  openEditor(p.id, true);
+});
+
+/* ============ エディタ ============ */
+const editor=document.getElementById('editor');
+const backdrop=document.getElementById('backdrop');
+function openEditor(id, isNew){
+  const p = points.find(x=>x.id===id); if(!p) return;
+  selectedId=id;
+  editing = JSON.parse(JSON.stringify(p));
+  document.getElementById('edTitle').textContent = isNew?"新規地点の登録":"地点の編集";
+  document.getElementById('edName').value = p.name||"";
+  document.getElementById('edDistrict').value = p.district||"";
+  document.getElementById('edNotes').value = p.notes||"";
+  document.getElementById('edLat').value = (+p.lat).toFixed(6);
+  document.getElementById('edLng').value = (+p.lng).toFixed(6);
+  document.getElementById('edCover').value = p.cover!=null?p.cover:"";
+  document.getElementById('edCover').placeholder = globalCover;
+  document.getElementById('edHose').value = p.hose!=null?p.hose:"";
+  document.getElementById('edHose').placeholder = document.getElementById('hoseR').value;
+  document.getElementById('edUpdated').textContent = fmtDate(p.updated);
+  setType(editing.type); setStatus(editing.status); renderPhotos();
+  editor.classList.add('open'); backdrop.classList.add('show');
+  render();
+}
+function closeEditor(){ editor.classList.remove('open'); backdrop.classList.remove('show'); editing=null; }
+document.getElementById('edClose').onclick=closeEditor;
+backdrop.onclick=closeEditor;
+
+function setType(v){ editing.type=v;
+  document.querySelectorAll('#edType .tbtn').forEach(b=>{
+    b.classList.remove('on-hyd','on-cis');
+    if(b.dataset.v===v) b.classList.add(v==="消火栓"?"on-hyd":"on-cis");
+  });
+}
+function setStatus(v){ editing.status=v;
+  document.querySelectorAll('#edStatus .sbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+}
+document.querySelectorAll('#edType .tbtn').forEach(b=>b.onclick=()=>setType(b.dataset.v));
+document.querySelectorAll('#edStatus .sbtn').forEach(b=>b.onclick=()=>setStatus(b.dataset.v));
+
+function renderPhotos(){
+  const wrap=document.getElementById('edPhotos'); wrap.innerHTML="";
+  (editing.photos||[]).forEach((src,i)=>{
+    const d=document.createElement('div'); d.className="photo";
+    d.innerHTML=`<img src="${src}"><button title="削除">×</button>`;
+    d.querySelector('button').onclick=()=>{ editing.photos.splice(i,1); renderPhotos(); };
+    d.querySelector('img').onclick=()=>window.open().document.write(`<img src="${src}" style="max-width:100%">`);
+    wrap.appendChild(d);
+  });
+  const add=document.createElement('div'); add.className="addphoto";
+  add.innerHTML=`<span>＋</span>写真を追加`;
+  add.onclick=()=>document.getElementById('photoInput').click();
+  wrap.appendChild(add);
+}
+document.getElementById('photoInput').onchange=async e=>{
+  const files=[...e.target.files];
+  for(const f of files){ const data=await compress(f); (editing.photos=editing.photos||[]).push(data); }
+  renderPhotos(); e.target.value="";
+};
+/* 画像を最大1280pxに圧縮してJPEG化（保存容量を抑える） */
+function compress(file){
+  return new Promise(res=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=1280; let{width:w,height:h}=img;
+      if(w>max||h>max){ const s=max/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',0.72));
+    };
+    img.onerror=()=>res(null);
+    img.src=url;
+  });
+}
+
+document.getElementById('edUseGps').onclick=()=>getGPS(([lat,lng])=>{
+  document.getElementById('edLat').value=lat.toFixed(6);
+  document.getElementById('edLng').value=lng.toFixed(6);
+  toast("現在地の座標を取り込みました");
+});
+
+document.getElementById('edSave').onclick=()=>{
+  const idx=points.findIndex(x=>x.id===editing.id); if(idx<0) return;
+  editing.name=document.getElementById('edName').value.trim();
+  editing.district=document.getElementById('edDistrict').value.trim();
+  editing.notes=document.getElementById('edNotes').value.trim();
+  editing.lat=parseFloat(document.getElementById('edLat').value);
+  editing.lng=parseFloat(document.getElementById('edLng').value);
+  const cv=document.getElementById('edCover').value; editing.cover=cv===""?null:parseFloat(cv);
+  const hv=document.getElementById('edHose').value;  editing.hose =hv===""?null:parseFloat(hv);
+  editing.updated=new Date().toISOString();
+  points[idx]=JSON.parse(JSON.stringify(editing));
+  save(); render(); closeEditor(); toast("保存しました");
+};
+document.getElementById('edDelete').onclick=()=>{
+  if(!confirm("この地点を削除します。よろしいですか？")) return;
+  points=points.filter(x=>x.id!==editing.id);
+  save(); render(); closeEditor(); toast("削除しました");
+};
+function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso);
+  return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0'); }
+
+/* ============ GPS ============ */
+function getGPS(cb){
+  if(!navigator.geolocation){ toast("位置情報に非対応の端末です"); return; }
+  toast("現在地を取得中…");
+  navigator.geolocation.getCurrentPosition(
+    pos=>cb([pos.coords.latitude,pos.coords.longitude]),
+    ()=>toast("位置情報を取得できませんでした（許可設定をご確認ください）"),
+    {enableHighAccuracy:true, timeout:8000});
+}
+let meMarker=null;
+document.getElementById('gpsBtn').onclick=()=>getGPS(([lat,lng])=>{
+  map.setView([lat,lng],17);
+  if(meMarker) map.removeLayer(meMarker);
+  meMarker=L.circleMarker([lat,lng],{radius:7,color:"#1769e0",fillColor:"#1769e0",fillOpacity:.9,weight:3}).addTo(map);
+});
+
+/* ============ データ入出力 ============ */
+document.getElementById('menuData').onclick=()=>{
+  const c=confirm("OK：JSONで書き出し（バックアップ）\nキャンセル：他の操作メニューを開く");
+  if(c){ exportJSON(); } else { dataMenu(); }
+};
+function dataMenu(){
+  const s=prompt("番号を入力：\n1) JSON書き出し（写真含む・バックアップ）\n2) JSON読み込み（復元／端末間コピー）\n3) CSV書き出し（一覧表・写真なし）\n4) 全データ削除\n5) 共有データ(data.json)を再読込","");
+  if(s==="1") exportJSON();
+  else if(s==="2") document.getElementById('fileImport').click();
+  else if(s==="3") exportCSV();
+  else if(s==="4"){ if(confirm("すべての地点データを削除します。元に戻せません。よろしいですか？")){ points=[]; save(); render(); toast("全データを削除しました"); } }
+  else if(s==="5") reloadSharedData();
+}
+/* 同じ場所にある data.json（共有データ）を取得する */
+async function fetchShared(url){
+  try{
+    const res=await fetch(url,{cache:"no-store"});
+    if(!res.ok) return null;
+    const raw=await res.json();
+    if(Array.isArray(raw)) return {points:raw, plans:null};
+    if(raw && Array.isArray(raw.points)) return {points:raw.points, plans:Array.isArray(raw.plans)?raw.plans:null};
+    return null;
+  }catch(e){ return null; }
+}
+function mergeSharedPlans(plans){
+  if(!plans) return;
+  const cur=loadPlans(); const ids=new Set(cur.map(x=>x.id));
+  plans.forEach(p=>{ if(!ids.has(p.id)) cur.push(p); });
+  storePlans(cur);
+}
+async function reloadSharedData(){
+  const sh=await fetchShared('./data.json');
+  if(!sh){ toast("data.json が見つかりませんでした（未配置か、ローカルファイルでは取得不可）"); return; }
+  if(!confirm("共有データ(data.json)で現在の地点表示を置き換えます。よろしいですか？\n（この端末での追加・編集は消えます。訓練計画は統合されます）")) return;
+  points=sh.points||[]; mergeSharedPlans(sh.plans); save(); render();
+  toast("共有データを読み込みました（"+points.length+"件）");
+}
+function exportJSON(){
+  const payload={version:2, exportedAt:new Date().toISOString(), points, plans:loadPlans()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  downloadBlob(blob, "motomiya_suiri_"+dateStamp()+".json");
+  toast("JSONを書き出しました（地点＋訓練計画）");
+}
+document.getElementById('fileImport').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const raw=JSON.parse(r.result);
+      let inPoints, inPlans=null;
+      if(Array.isArray(raw)){ inPoints=raw; }                 // 旧形式（地点のみ）
+      else if(raw && Array.isArray(raw.points)){ inPoints=raw.points; inPlans=Array.isArray(raw.plans)?raw.plans:null; }
+      else throw 0;
+      if(points.length && !confirm("現在のデータを置き換えます。よろしいですか？（キャンセルで統合）")){
+        const ids=new Set(points.map(p=>p.id));
+        inPoints.forEach(p=>{ if(!ids.has(p.id)) points.push(p); });
+      } else { points=inPoints; }
+      if(inPlans){ // 訓練計画は常に統合（重複IDは除外）
+        const cur=loadPlans(); const pid=new Set(cur.map(x=>x.id));
+        inPlans.forEach(pl=>{ if(!pid.has(pl.id)) cur.push(pl); });
+        storePlans(cur);
+      }
+      save(); render();
+      toast("読み込みました（地点"+inPoints.length+"件"+(inPlans?"／計画"+inPlans.length+"件":"")+"）");
+    }catch(err){ toast("読み込めませんでした（JSON形式をご確認ください）"); }
+  };
+  r.readAsText(f); e.target.value="";
+};
+function exportCSV(){
+  const head=["種別","地区","名称","状態","メモ","緯度","経度","水利基準半径m","展張半径m","更新日時","写真枚数"];
+  const rows=points.map(p=>[p.type,p.district||"",p.name,p.status,(p.notes||"").replace(/\n/g," "),
+    p.lat,p.lng, p.cover!=null?p.cover:globalCover, p.hose!=null?p.hose:document.getElementById('hoseR').value,
+    fmtDate(p.updated), (p.photos||[]).length]);
+  const csv=[head,...rows].map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv"});
+  downloadBlob(blob,"motomiya_suiri_"+dateStamp()+".csv");
+  toast("CSVを書き出しました");
+}
+function downloadBlob(blob,name){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function dateStamp(){ const d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+
+/* ============ モバイルサイドバー ============ */
+document.getElementById('menuToggle').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+function closeSidebarMobile(){ if(window.innerWidth<=760) document.getElementById('sidebar').classList.remove('open'); }
+
+/* ============ 水利空白（火災リスク）の見える化 ============ */
+function computeRisk(){
+  riskLayer.clearLayers();
+  const on = $('lyRisk').checked;
+  $('riskLegend').style.display = on ? 'block' : 'none';
+  if(!on) return;
+  const b=map.getBounds();
+  const wM=map.distance(b.getNorthWest(), b.getNorthEast());
+  const hM=map.distance(b.getNorthWest(), b.getSouthWest());
+  let cell=Math.max(45, Math.min(220, wM/38));
+  while((wM/cell)*(hM/cell) > 1600) cell*=1.3;
+  const avail=points.filter(p=>p.status!=="破損");
+  const south=b.getSouth(), west=b.getWest(), north=b.getNorth(), east=b.getEast();
+  const midLat=(south+north)/2;
+  const dLat=cell/111320, dLng=cell/(111320*Math.cos(midLat*Math.PI/180));
+  const basis=globalCover;
+  const cells=[];
+  for(let lat=south; lat<north; lat+=dLat){
+    for(let lng=west; lng<east; lng+=dLng){
+      const cLat=lat+dLat/2, cLng=lng+dLng/2;
+      let dmin=Infinity;
+      for(let i=0;i<avail.length;i++){
+        const d=map.distance([cLat,cLng],[avail[i].lat,avail[i].lng]);
+        if(d<dmin){ dmin=d; if(dmin<=basis) break; }
+      }
+      if(dmin<=basis) continue;
+      let col,op;
+      if(dmin<=basis*1.5){col="#ffd21e";op=.38;}
+      else if(dmin<=basis*2.5){col="#ff8c1a";op=.42;}
+      else {col="#e4002b";op=.44;}
+      cells.push(L.rectangle([[lat,lng],[lat+dLat,lng+dLng]],
+        {stroke:false, fillColor:col, fillOpacity:op, interactive:false}));
+    }
+  }
+  cells.forEach(r=>riskLayer.addLayer(r));
+}
+$('lyRisk').onchange=e=>{
+  e.target.checked ? riskLayer.addTo(map) : map.removeLayer(riskLayer);
+  computeRisk(); savePrefs();
+};
+
+/* ============ 訓練シミュレーション ============ */
+let sim={active:false, source:null, fire:null, relays:[], notes:[], place:null,
+         hoseLen:20, factor:1.2, legMax:200};
+function simIcon(kind,label){
+  const cls=kind==="source"?"sim-src":kind==="fire"?"sim-fire":kind==="note"?"sim-note":"sim-relay";
+  return L.divIcon({className:"", html:`<div class="sim-pin ${cls}">${label}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
+}
+function simEnter(){
+  sim.active=true;
+  $('simBtn').classList.add('primary','active');
+  $('simToolbar').classList.add('show');
+  $('simCard').style.display='block';
+  addMode=false; $('addBtn').classList.remove('active'); $('addHint').classList.remove('show');
+  map.getContainer().style.cursor='';
+  simLayer.addTo(map); simLabelLayer.addTo(map);   // 訓練レイヤーを表示
+  simRender();
+}
+function simExit(){
+  sim.active=false; sim.place=null;
+  $('simBtn').classList.remove('primary','active');
+  $('simToolbar').classList.remove('show');
+  $('simCard').style.display='none';
+  document.querySelectorAll('.sim-btn[data-place]').forEach(x=>x.classList.remove('armed'));
+  map.getContainer().style.cursor='';
+  map.removeLayer(simLayer); map.removeLayer(simLabelLayer);   // 訓練レイヤーを非表示
+}
+$('simBtn').title = "訓練レイヤーの表示／非表示";
+$('simBtn').onclick=()=> sim.active?simExit():simEnter();
+$('simExit').onclick=simExit;
+$('simClear').onclick=()=>{ sim.source=null; sim.fire=null; sim.relays=[]; sim.notes=[]; simRender(); toast("配置をクリアしました"); };
+document.querySelectorAll('.sim-btn[data-place]').forEach(b=>{
+  b.onclick=()=>{
+    const arm = sim.place!==b.dataset.place ? b.dataset.place : null;
+    sim.place=arm;
+    document.querySelectorAll('.sim-btn[data-place]').forEach(x=>x.classList.toggle('armed', x.dataset.place===arm));
+    map.getContainer().style.cursor = arm?'crosshair':'';
+    if(arm) toast(arm==="source"?"💧水元を置く場所をタップ": arm==="fire"?"🔥火点を置く場所をタップ":
+                  arm==="note"?"📝メモを置く場所をタップ（連続可）":"➕中継ポンプの場所をタップ（連続可）");
+  };
+});
+function nearestWater(latlng,maxM){
+  let best=null,bd=Infinity;
+  points.forEach(p=>{ const d=map.distance(latlng,[p.lat,p.lng]); if(d<bd){bd=d;best=p;} });
+  return (best && bd<=maxM)?best:null;
+}
+function simPlace(latlng){
+  if(sim.place==="source"){
+    const s=nearestWater(latlng,30);
+    sim.source=s?{lat:s.lat,lng:s.lng,name:s.name||s.type,memo:""}:{lat:latlng.lat,lng:latlng.lng,memo:""};
+    if(s) toast("水元：既設水利「"+(s.name||s.type)+"」にスナップ");
+  }else if(sim.place==="fire"){ sim.fire={lat:latlng.lat,lng:latlng.lng,memo:""}; }
+  else if(sim.place==="relay"){ sim.relays.push({lat:latlng.lat,lng:latlng.lng,memo:""}); }
+  else if(sim.place==="note"){ sim.notes.push({lat:latlng.lat,lng:latlng.lng,memo:"メモ",memoPos:"bottom",memoVertical:false,fontSize:15,bold:false}); }
+  if(sim.place!=="relay" && sim.place!=="note"){ sim.place=null;
+    document.querySelectorAll('.sim-btn[data-place]').forEach(x=>x.classList.remove('armed'));
+    map.getContainer().style.cursor=''; }
+  simRender();
+}
+function simPath(){
+  if(!sim.source||!sim.fire) return null;
+  const s=sim.source;
+  const relays=[...sim.relays].sort((a,b)=>
+    map.distance([s.lat,s.lng],[a.lat,a.lng]) - map.distance([s.lat,s.lng],[b.lat,b.lng]));
+  return [s,...relays,sim.fire];
+}
+/* メモは自前のラベル（divIcon）で描画し、縦横をCSSで確実に制御する */
+function mkMemoLabel(pt){
+  const pos=pt.memoPos||'bottom';
+  const size=pt.fontSize||11, weight=pt.bold?800:600;
+  const style=`font-size:${size}px;font-weight:${weight}`;
+  const html=`<div class="memo-lbl ${pt.memoVertical?'v':'h'}" data-dir="${pos}" style="${style}">${escapeHtml(pt.memo)}</div>`;
+  return L.marker([pt.lat,pt.lng],{
+    icon:L.divIcon({className:'memo-wrap', html, iconSize:[0,0], iconAnchor:[0,0]}),
+    interactive:false, keyboard:false, zIndexOffset:500
+  });
+}
+function renderLabels(){
+  simLabelLayer.clearLayers();
+  const add=pt=>{ if(pt&&pt.memo) simLabelLayer.addLayer(mkMemoLabel(pt)); };
+  add(sim.source); sim.relays.forEach(add); add(sim.fire); sim.notes.forEach(add);
+}
+function mkSimMarker(pt,kind,label){
+  const m=L.marker([pt.lat,pt.lng],{icon:simIcon(kind,label),draggable:true});
+  const title = kind==="source"?"💧 水元"+(pt.name?"（"+escapeHtml(pt.name)+"）":"")
+              : kind==="fire"?"🔥 火点" : kind==="note"?"📝 自由メモ" : "➕ 中継ポンプ "+label;
+  const size=pt.fontSize||11;
+  m.bindPopup(
+    `<div class="sim-pop"><b>${title}</b>
+       <textarea class="sim-memo" rows="3" placeholder="${kind==="note"?"自由に書き込めるメモ":"この地点のメモ（例：吸管2本使用／部署スペース狭い／到達3分 など）"}">${escapeHtml(pt.memo||"")}</textarea>
+       <div class="sim-pop-row"><span>位置</span>
+         <button class="mp" data-pos="top">上</button>
+         <button class="mp" data-pos="bottom">下</button>
+         <button class="mp" data-pos="left">左</button>
+         <button class="mp" data-pos="right">右</button>
+       </div>
+       <div class="sim-pop-row"><span>向き</span>
+         <button class="mo" data-vert="0">横書き</button>
+         <button class="mo" data-vert="1">縦書き</button>
+       </div>
+       <div class="sim-pop-row"><span>字</span>
+         <button class="mz" data-size="11">小</button>
+         <button class="mz" data-size="15">中</button>
+         <button class="mz" data-size="20">大</button>
+         <button class="mb">太字</button>
+       </div>
+       <div class="sim-pop-ft">
+         <button class="sim-pop-save">保存</button>
+         ${(kind==="relay"||kind==="note")?'<button class="sim-pop-del">削除</button>':''}
+       </div>
+     </div>`, {minWidth:244, closeButton:true});
+  const removePt=()=>{ if(kind==="note") sim.notes=sim.notes.filter(r=>r!==pt); else sim.relays=sim.relays.filter(r=>r!==pt); };
+  m.on('popupopen',()=>{
+    const el=m.getPopup().getElement();
+    const ta=el.querySelector('.sim-memo');
+    ta.focus();
+    ta.oninput=()=>{ pt.memo=ta.value; renderLabels(); updateNotes(); savePrefs(); };
+    el.querySelectorAll('.mp').forEach(b=>{
+      b.classList.toggle('on',(pt.memoPos||'bottom')===b.dataset.pos);
+      b.onclick=()=>{ pt.memoPos=b.dataset.pos;
+        el.querySelectorAll('.mp').forEach(x=>x.classList.toggle('on',x===b));
+        renderLabels(); savePrefs(); };
+    });
+    el.querySelectorAll('.mo').forEach(b=>{
+      b.classList.toggle('on',String(pt.memoVertical?1:0)===b.dataset.vert);
+      b.onclick=()=>{ pt.memoVertical=b.dataset.vert==="1";
+        el.querySelectorAll('.mo').forEach(x=>x.classList.toggle('on',x===b));
+        renderLabels(); savePrefs(); };
+    });
+    el.querySelectorAll('.mz').forEach(b=>{
+      b.classList.toggle('on',(pt.fontSize||11)===parseInt(b.dataset.size));
+      b.onclick=()=>{ pt.fontSize=parseInt(b.dataset.size);
+        el.querySelectorAll('.mz').forEach(x=>x.classList.toggle('on',x===b));
+        renderLabels(); savePrefs(); };
+    });
+    const mb=el.querySelector('.mb');
+    mb.classList.toggle('on',!!pt.bold);
+    mb.onclick=()=>{ pt.bold=!pt.bold; mb.classList.toggle('on',pt.bold); renderLabels(); savePrefs(); };
+    el.querySelector('.sim-pop-save').onclick=()=>{ pt.memo=ta.value; m.closePopup(); renderLabels(); updateNotes(); savePrefs(); };
+    const del=el.querySelector('.sim-pop-del');
+    if(del) del.onclick=()=>{ removePt(); m.closePopup(); simRender(); };
+  });
+  m.on('dragend',()=>{ const ll=m.getLatLng(); pt.lat=ll.lat; pt.lng=ll.lng; simRender(); });
+  if(kind==="relay"||kind==="note") m.on('dblclick',()=>{ removePt(); simRender(); });
+  return m;
+}
+function planNotes(){
+  const n=[];
+  if(sim.source&&sim.source.memo) n.push(["💧 水元", sim.source.memo]);
+  sim.relays.forEach((r,i)=>{ if(r.memo) n.push(["➕ 中継 P"+(i+1), r.memo]); });
+  if(sim.fire&&sim.fire.memo) n.push(["🔥 火点", sim.fire.memo]);
+  sim.notes.forEach((r,i)=>{ if(r.memo) n.push(["📝 メモ"+(i+1), r.memo]); });
+  return n;
+}
+function updateNotes(){
+  const box=$('simNotes'); if(!box) return;
+  const n=planNotes();
+  box.innerHTML = n.length
+    ? `<div style="font-weight:700;color:var(--navy);margin-bottom:2px">📝 各地点メモ</div>`+
+      n.map(([t,m])=>`<div><b>${t}：</b>${escapeHtml(m)}</div>`).join("")
+    : `<div style="color:var(--muted)">各マーカーをタップするとメモを入力できます。</div>`;
+}
+function simRender(){
+  simLayer.clearLayers();
+  if(sim.source) simLayer.addLayer(mkSimMarker(sim.source,"source","水"));
+  sim.relays.forEach((r,i)=>simLayer.addLayer(mkSimMarker(r,"relay","P"+(i+1))));
+  if(sim.fire) simLayer.addLayer(mkSimMarker(sim.fire,"fire","🔥"));
+  sim.notes.forEach(n=>simLayer.addLayer(mkSimMarker(n,"note","📝")));
+  renderLabels();
+  const path=simPath();
+  const out=$('simResult');
+  if(!path){
+    out.className="sim-empty";
+    out.innerHTML="「💧水元」→「🔥火点」の順に地図をタップして配置してください。<div id=\"simNotes\" class=\"sim-notes\"></div>";
+    updateNotes(); savePrefs(); return;
+  }
+  simLayer.addLayer(L.polyline(path.map(p=>[p.lat,p.lng]),{color:"#e4002b",weight:4,opacity:.85}));
+  const {hoseLen,factor,legMax}=sim;
+  let total=0,totalHose=0,rows="",over=false;
+  for(let i=0;i<path.length-1;i++){
+    const d=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
+    const h=Math.max(1,Math.ceil(d*factor/hoseLen));
+    total+=d; totalHose+=h; if(d>legMax) over=true;
+    const mid=[(path[i].lat+path[i+1].lat)/2,(path[i].lng+path[i+1].lng)/2];
+    simLayer.addLayer(L.marker(mid,{icon:L.divIcon({className:"",html:`<div class="seg-label">${h}本</div>`,iconSize:[0,0]}),interactive:false}));
+    rows+=`<tr><td>区間${i+1}</td><td>${Math.round(d)}m ／ ${h}本</td></tr>`;
+  }
+  const pumps=1+sim.relays.length;
+  out.className="sim-readout";
+  out.innerHTML=
+    `<div><span class="big">${totalHose}本</span> のホース（合計 約${Math.round(total)}m）</div>
+     <div>可搬ポンプ <span class="big">${pumps}台</span>（水元1＋中継${sim.relays.length}）</div>
+     <table>${rows}</table>`+
+    (over?`<div class="warn">⚠ 目安（${legMax}m/区間）超の区間あり。中継ポンプ追加を検討。</div>`:"")+
+    (total>legMax && sim.relays.length===0?`<div class="warn">⚠ 総延長が目安を超過。「➕中継」で区間を分割できます。</div>`:"")+
+    `<div id="simNotes" class="sim-notes"></div>`;
+  updateNotes(); savePrefs();
+}
+['simHose','simFactor','simLeg'].forEach(id=>{
+  $(id).oninput=()=>{
+    sim.hoseLen=parseFloat($('simHose').value)||20;
+    sim.factor=parseFloat($('simFactor').value)||1.2;
+    sim.legMax=parseFloat($('simLeg').value)||200;
+    simRender(); savePrefs();
+  };
+});
+
+/* ============ 訓練計画ライブラリ（日付で保存・振り返り）============ */
+const PLANS_KEY="motomiya_suiri_plans_v1";
+function loadPlans(){ try{const r=localStorage.getItem(PLANS_KEY); return r?JSON.parse(r):[];}catch(e){return [];} }
+function storePlans(a){ try{localStorage.setItem(PLANS_KEY, JSON.stringify(a));}catch(e){ toast("保存容量オーバーの可能性。不要な計画を削除してください"); } }
+function currentPlanData(){
+  return { source:sim.source, fire:sim.fire, relays:sim.relays, notes:sim.notes,
+    params:{hoseLen:sim.hoseLen,factor:sim.factor,legMax:sim.legMax},
+    view:{lat:map.getCenter().lat,lng:map.getCenter().lng,z:map.getZoom()} };
+}
+function planHose(d){
+  if(!d.source||!d.fire) return null;
+  const s=d.source, relays=[...(d.relays||[])].sort((a,b)=>
+    map.distance([s.lat,s.lng],[a.lat,a.lng])-map.distance([s.lat,s.lng],[b.lat,b.lng]));
+  const path=[s,...relays,d.fire], P=d.params||{};
+  let total=0,hose=0;
+  for(let i=0;i<path.length-1;i++){ const dd=map.distance([path[i].lat,path[i].lng],[path[i+1].lat,path[i+1].lng]);
+    total+=dd; hose+=Math.max(1,Math.ceil(dd*(P.factor||1.2)/(P.hoseLen||20))); }
+  return {total:Math.round(total),hose};
+}
+function fmtDay(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return iso;
+  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,'0')+"/"+String(d.getDate()).padStart(2,'0'); }
+function renderPlanList(){
+  const box=$('planList'); const plans=loadPlans()
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||"").localeCompare(a.createdAt||""));
+  if(!plans.length){ box.innerHTML=`<div class="plan-empty">まだ保存された計画はありません。<br>上の欄に実施日・地区・名称を入れて<br>「現在の計画を保存」で記録できます。</div>`; return; }
+  box.innerHTML="";
+  plans.forEach(p=>{
+    const h=planHose(p.data||{});
+    const d=p.data||{};
+    const sum=[`中継 ${d.relays?d.relays.length:0}`, `メモ ${d.notes?d.notes.length:0}`]
+      .concat(h?[`総延長 約${h.total}m / ${h.hose}本`]:[]).join(" ・ ");
+    const el=document.createElement('div'); el.className="plan-item";
+    el.innerHTML=
+      `<div class="pi-top"><span class="pi-date">${fmtDay(p.date)}</span>${p.district?`<span class="pi-dist">${escapeHtml(p.district)}</span>`:""}</div>
+       <div class="pi-title">${escapeHtml(p.title||"(無題)")}</div>
+       <div class="pi-sum">${sum}</div>
+       <div class="pi-ft"><button class="pi-open">開く</button><button class="pi-over">上書き</button><button class="pi-del">削除</button></div>`;
+    el.querySelector('.pi-open').onclick=()=>openPlan(p);
+    el.querySelector('.pi-over').onclick=()=>overwritePlan(p);
+    el.querySelector('.pi-del').onclick=()=>{ if(confirm("この計画を削除します。よろしいですか？")){
+      storePlans(loadPlans().filter(x=>x.id!==p.id)); renderPlanList(); toast("削除しました"); } };
+    box.appendChild(el);
+  });
+}
+function overwritePlan(p){
+  if(!(sim.source||sim.fire||(sim.notes&&sim.notes.length))){ toast("上書きする配置がありません（訓練レイヤーで配置してください）"); return; }
+  if(!confirm("「"+(p.title||"(無題)")+"（"+fmtDay(p.date)+"）」を、現在の配置で上書きします。よろしいですか？")) return;
+  const plans=loadPlans(); const t=plans.find(x=>x.id===p.id);
+  if(!t){ toast("対象の計画が見つかりません"); return; }
+  t.data=currentPlanData(); t.updatedAt=new Date().toISOString();
+  storePlans(plans); renderPlanList(); toast("上書き保存しました");
+}
+function openPlan(p){
+  const d=p.data||{};
+  const hasCur = sim.source||sim.fire||(sim.relays&&sim.relays.length)||(sim.notes&&sim.notes.length);
+  if(hasCur && !confirm("現在編集中の計画を、選んだ計画に置き換えます。よろしいですか？（保存済みの記録は消えません）")) return;
+  sim.source=d.source||null; sim.fire=d.fire||null; sim.relays=d.relays||[]; sim.notes=d.notes||[];
+  if(d.params){ sim.hoseLen=d.params.hoseLen||20; sim.factor=d.params.factor||1.2; sim.legMax=d.params.legMax||200;
+    $('simHose').value=sim.hoseLen; $('simFactor').value=sim.factor; $('simLeg').value=sim.legMax; }
+  closePlanLib();
+  if(!sim.active) simEnter(); else simRender();
+  if(d.view && isFinite(d.view.lat)) map.setView([d.view.lat,d.view.lng], d.view.z||16);
+  savePrefs(); toast(fmtDay(p.date)+" の計画を読み込みました");
+  $('planDate').value=p.date||new Date().toISOString().slice(0,10);
+  $('planTitle').value=p.title||""; $('planDistrict').value=p.district||"";
+}
+function openPlanLib(){
+  if(!$('planDate').value) $('planDate').value=new Date().toISOString().slice(0,10);
+  buildDistrictOptions();
+  renderPlanList();
+  $('planLib').classList.add('open'); $('planBackdrop').classList.add('show');
+}
+function closePlanLib(){ $('planLib').classList.remove('open'); $('planBackdrop').classList.remove('show'); }
+$('planOpen').onclick=openPlanLib;
+$('planClose').onclick=closePlanLib;
+$('planBackdrop').onclick=closePlanLib;
+$('planSaveBtn').onclick=()=>{
+  if(!(sim.source||sim.fire||(sim.notes&&sim.notes.length))){ toast("保存する配置がありません（水元・火点・メモを置いてください）"); return; }
+  const plans=loadPlans();
+  plans.push({ id:uid(), date:$('planDate').value||new Date().toISOString().slice(0,10),
+    district:$('planDistrict').value.trim(), title:$('planTitle').value.trim()||"(無題)",
+    createdAt:new Date().toISOString(), data:currentPlanData() });
+  storePlans(plans); renderPlanList(); toast("計画を保存しました");
+};
+
+/* ============ 表示設定の保存・復元 ============ */
+function savePrefs(){
+  if(restoring) return;
+  try{
+    const c=map.getCenter();
+    const prefs={
+      district:filter.district, type:filter.type, status:filter.status, q:filter.q,
+      cover:globalCover, hose:$('hoseR').value,
+      layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
+      simParams:{hose:sim.hoseLen, factor:sim.factor, legMax:sim.legMax},
+      simPlan:{source:sim.source, fire:sim.fire, relays:sim.relays, notes:sim.notes},
+      view:{lat:c.lat, lng:c.lng, z:map.getZoom()}
+    };
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  }catch(e){}
+}
+function loadPrefs(){
+  try{ const raw=localStorage.getItem(PREFS_KEY); return raw?JSON.parse(raw):null; }
+  catch(e){ return null; }
+}
+function syncChips(){
+  document.querySelectorAll('.chip').forEach(ch=>{
+    ch.classList.toggle('on', (filter[ch.dataset.f]||'all')===ch.dataset.v);
+  });
+}
+function applyPrefs(p){
+  restoring=true;
+  // 絞り込み
+  filter.type=p.type||"all"; filter.status=p.status||"all";
+  filter.district=p.district||"all"; filter.q=p.q||"";
+  $('search').value=filter.q;
+  syncChips();
+  // 水利基準円の半径
+  if(p.cover){ globalCover=p.cover;
+    document.querySelectorAll('#coverSeg button').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.r)===globalCover)); }
+  // ホース展張半径
+  if(p.hose) $('hoseR').value=p.hose;
+  render();
+  // レイヤーのON/OFF（既存ハンドラを再利用）
+  if(p.layers){
+    $('lyBase2').checked=!!p.layers.pale; $('lyBase2').dispatchEvent(new Event('change'));
+    $('lyPhoto').checked=!!p.layers.photo; $('lyPhoto').dispatchEvent(new Event('change'));
+    $('lyCover').checked=p.layers.cover!==false; $('lyCover').dispatchEvent(new Event('change'));
+    $('lyHose').checked=!!p.layers.hose; $('lyHose').dispatchEvent(new Event('change'));
+    $('lyRisk').checked=!!p.layers.risk; $('lyRisk').dispatchEvent(new Event('change'));
+  }
+  // 訓練パラメータ
+  if(p.simParams){
+    sim.hoseLen=p.simParams.hose||20; sim.factor=p.simParams.factor||1.2; sim.legMax=p.simParams.legMax||200;
+    $('simHose').value=sim.hoseLen; $('simFactor').value=sim.factor; $('simLeg').value=sim.legMax;
+  }
+  if(p.simPlan){
+    sim.source=p.simPlan.source||null; sim.fire=p.simPlan.fire||null; sim.relays=p.simPlan.relays||[]; sim.notes=p.simPlan.notes||[];
+  }
+  // 地図の表示位置
+  if(p.view && isFinite(p.view.lat)) map.setView([p.view.lat,p.view.lng], p.view.z||15);
+  if($('lyRisk').checked) computeRisk();
+  restoring=false;
+}
+
+/* ============ トースト ============ */
+let toastTimer=null;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
+
+/* ============ 起動 ============ */
+(async function init(){
+  let ok = load();                        // 端末内の保存データを優先
+  if(!ok){                                // 無ければ共有データ(data.json)を試す（GitHub Pages等）
+    const sh = await fetchShared('./data.json');
+    if(sh){ points = sh.points||[]; mergeSharedPlans(sh.plans); ok=true; }
+  }
+  if(!ok) seed();                         // それも無ければサンプル
+  const _prefs = loadPrefs();
+  if(_prefs){ applyPrefs(_prefs); } else { render(); }
+  map.on('moveend', savePrefs);           // 地図を動かしたら位置を記憶
+  map.on('moveend', ()=>{ if($('lyRisk').checked) computeRisk(); });
+  setTimeout(()=>map.invalidateSize(),200);
+})();
+</script>
+</body>
+</html>
