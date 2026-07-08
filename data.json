@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-08T04:22:53.016Z",
+  "exportedAt": "2026-07-08T05:26:35.644Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -34,8 +34,8 @@
       "id": "mra2t5zmyz51m",
       "type": "防火水槽",
       "name": "松沢字弥五郎内",
-      "lat": 37.488708,
-      "lng": 140.483645,
+      "lat": 37.488433,
+      "lng": 140.483721,
       "status": "破損",
       "notes": "水草による水利不全",
       "district": "松沢",
@@ -44,7 +44,7 @@
       ],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-07T22:33:36.423Z"
+      "updated": "2026-07-08T05:25:10.523Z"
     },
     {
       "id": "mra2xdt4h59th",
