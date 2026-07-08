@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-07T22:33:45.069Z",
+  "exportedAt": "2026-07-08T02:31:27.559Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -129,6 +129,34 @@
       "cover": null,
       "hose": null,
       "updated": "2026-07-07T10:31:11.073Z"
+    },
+    {
+      "id": "mrbgbghgvupyd",
+      "type": "消火栓",
+      "name": "松沢字中里",
+      "lat": 37.486571,
+      "lng": 140.488808,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-08T02:21:22.469Z"
+    },
+    {
+      "id": "mrbglpaxtdetz",
+      "type": "防火水槽",
+      "name": "松沢字中里",
+      "lat": 37.489085,
+      "lng": 140.487553,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-08T02:29:17.707Z"
     }
   ],
   "plans": [
