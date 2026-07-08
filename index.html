@@ -579,6 +579,7 @@
       <div class="bd">
         <div class="row"><input type="checkbox" id="lyBase2" ><label for="lyBase2">背景を淡色地図に</label></div>
         <div class="row"><input type="checkbox" id="lyPhoto" ><label for="lyPhoto">航空写真</label></div>
+        <div class="row"><input type="checkbox" id="lyShade" ><label for="lyShade">🏔 陰影起伏（地形を立体表示）</label></div>
         <hr style="border:none;border-top:1px solid var(--line);margin:6px 0">
         <div class="row"><input type="checkbox" id="lyCover" checked><label for="lyCover"><span class="swatch" style="background:rgba(15,103,192,.18);border:1px solid var(--cistern)"></span>水利基準円</label></div>
         <div class="seg" id="coverSeg">
@@ -817,6 +818,12 @@ const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{
 const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
   {maxZoom:18, attribution:"地理院タイル（シームレス空中写真）"});
 gsiStd.addTo(map);
+// 陰影起伏図（地形を立体表示）：背景タイルの上・マーカーの下に半透明で重ねる専用ペイン
+map.createPane('shadePane');
+map.getPane('shadePane').style.zIndex=250;                 // tilePane(200) < これ < overlayPane(400)
+map.getPane('shadePane').style.pointerEvents='none';
+const gsiHill = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
+  {maxZoom:18, opacity:0.35, pane:'shadePane', attribution:"地理院タイル（陰影起伏図）"});
 
 const markerLayer = L.layerGroup().addTo(map);
 const coverLayer  = L.layerGroup().addTo(map);
@@ -1044,6 +1051,7 @@ document.getElementById('lyPhoto').onchange=e=>{
     (document.getElementById('lyBase2').checked?gsiPale:gsiStd).addTo(map); }
   savePrefs();
 };
+document.getElementById('lyShade').onchange=e=>{ e.target.checked?gsiHill.addTo(map):map.removeLayer(gsiHill); savePrefs(); };
 document.getElementById('lyCover').onchange=e=>{ e.target.checked?coverLayer.addTo(map):map.removeLayer(coverLayer); savePrefs(); };
 document.getElementById('lyHose').onchange=e=>{ e.target.checked?hoseLayer.addTo(map):map.removeLayer(hoseLayer); savePrefs(); };
 document.querySelectorAll('#coverSeg button').forEach(b=>{
@@ -2013,7 +2021,7 @@ function savePrefs(){
       district:filter.district, type:filter.type, status:filter.status, q:filter.q,
       sort:filter.sort, planSort:planSortMode,
       cover:globalCover, hose:$('hoseR').value,
-      layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
+      layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, shade:$('lyShade').checked, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
       simParams:{hose:sim.hoseLen, factor:sim.factor, legMax:sim.legMax},
       simPlan:{source:sim.source, fire:sim.fire, relays:sim.relays, notes:sim.notes},
       view:{lat:c.lat, lng:c.lng, z:map.getZoom()}
@@ -2050,6 +2058,7 @@ function applyPrefs(p){
   if(p.layers){
     $('lyBase2').checked=!!p.layers.pale; $('lyBase2').dispatchEvent(new Event('change'));
     $('lyPhoto').checked=!!p.layers.photo; $('lyPhoto').dispatchEvent(new Event('change'));
+    $('lyShade').checked=!!p.layers.shade; $('lyShade').dispatchEvent(new Event('change'));
     $('lyCover').checked=p.layers.cover!==false; $('lyCover').dispatchEvent(new Event('change'));
     $('lyHose').checked=!!p.layers.hose; $('lyHose').dispatchEvent(new Event('change'));
     $('lyRisk').checked=!!p.layers.risk; $('lyRisk').dispatchEvent(new Event('change'));
