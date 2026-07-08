@@ -91,6 +91,10 @@
     width:calc(100% - 28px); margin:6px 14px 2px; padding:8px 10px; font-size:13px;
     border:1px solid var(--line); border-radius:8px;
   }
+  .sortbar{display:flex; align-items:center; gap:8px; padding:4px 14px 2px}
+  .sortbar .sb-label{font-size:11.5px; font-weight:700; color:var(--muted); white-space:nowrap}
+  .sortbar select{flex:1; min-width:0; padding:6px 8px; font-size:12.5px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; font-family:inherit; color:var(--ink)}
   #list{flex:1; overflow-y:auto; padding:6px 10px 14px}
   .item{
     display:flex; gap:10px; align-items:flex-start; padding:9px 10px; border-radius:10px;
@@ -270,6 +274,9 @@
   #planLib.open{transform:none}
   .plan-save{padding-bottom:12px; border-bottom:1px solid var(--line)}
   .plan-hist-hd{font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 8px; letter-spacing:.02em}
+  .plan-hist-bar{display:flex; align-items:center; gap:8px}
+  .plan-hist-bar select{margin-left:auto; padding:6px 8px; font-size:12.5px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; font-family:inherit; color:var(--ink); font-weight:400; letter-spacing:0}
   .plan-item{border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px}
   .plan-item .pi-top{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
   .plan-item .pi-date{font-size:13px; font-weight:800; color:var(--navy)}
@@ -343,7 +350,7 @@
     .item{padding:12px 10px}
     .item .t{font-size:14.5px}
     .item .s{font-size:12.5px}
-    #districtSel{font-size:16px; padding:10px 9px}
+    #districtSel,.sortbar select,.plan-hist-bar select{font-size:16px; padding:9px}
 
     /* 地図上カード：画面を覆わないよう小さく／畳めるように */
     #layerCard{width:196px; top:8px; right:calc(8px + env(safe-area-inset-right))}
@@ -526,6 +533,15 @@
         <span class="chip" data-f="status" data-v="未確認">未確認</span>
       </div>
       <input id="search" type="text" placeholder="🔍 名称・メモで検索">
+      <div class="sortbar">
+        <span class="sb-label">並び替え</span>
+        <select id="listSort" title="水利一覧の並び替え">
+          <option value="name-asc">名前（昇順）</option>
+          <option value="name-desc">名前（降順）</option>
+          <option value="status">状態（要確認を優先）</option>
+          <option value="updated">更新が新しい順</option>
+        </select>
+      </div>
       <div id="list"></div>
     </aside>
 
@@ -662,7 +678,14 @@
           <button class="btn" id="planPdfBtn" style="width:100%;margin-top:8px;background:#fff;color:var(--navy);border:1px solid var(--navy)">🖨 現在の計画をPDFで保存</button>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">水元・火点・中継・メモ・各設定をまとめて記録します。</div>
         </div>
-        <div class="plan-hist-hd">保存済みの計画</div>
+        <div class="plan-hist-hd plan-hist-bar">
+          <span>保存済みの計画</span>
+          <select id="planSort" title="訓練計画の並び替え">
+            <option value="date-asc">実施日（昇順）</option>
+            <option value="date-desc">実施日（降順）</option>
+            <option value="created">保存が新しい順</option>
+          </select>
+        </div>
         <div id="planList"></div>
       </div>
     </div>
@@ -779,7 +802,8 @@ const CENTER = [37.5126, 140.3919]; // 本宮市役所付近
 // 本宮市の地区（大字）。データに無い地区も選べるよう初期リストとして用意
 const DISTRICTS = ["本宮","青田","荒井","稲沢","岩根","白岩","関下","高木","長屋","仁井田","糠沢","松沢","和田"];
 let points = [];
-let filter = {type:"all", status:"all", q:"", district:"all"};
+let filter = {type:"all", status:"all", q:"", district:"all", sort:"name-asc"};
+let planSortMode = "date-asc";
 let selectedId = null;
 let addMode = false;
 let editing = null; // 作業中コピー
@@ -961,6 +985,17 @@ function renderStats(){
   document.getElementById('stCis').textContent = points.filter(p=>p.type==="防火水槽").length;
   document.getElementById('stBad').textContent = points.filter(p=>p.status==="要点検"||p.status==="破損").length;
 }
+function sortPoints(arr){
+  const m=filter.sort||"name-asc";
+  const nm=p=>(p.name||"").toString();
+  const rank={"破損":0,"要点検":1,"未確認":2,"正常":3};
+  const a=[...arr];
+  if(m==="name-desc")      a.sort((x,y)=>nm(y).localeCompare(nm(x),"ja"));
+  else if(m==="status")    a.sort((x,y)=>(rank[x.status]??9)-(rank[y.status]??9) || nm(x).localeCompare(nm(y),"ja"));
+  else if(m==="updated")   a.sort((x,y)=>(y.updated||"").localeCompare(x.updated||""));
+  else                     a.sort((x,y)=>nm(x).localeCompare(nm(y),"ja"));  // name-asc（既定）
+  return a;
+}
 function renderList(shown){
   const el = document.getElementById('list');
   if(!shown.length){
@@ -968,7 +1003,7 @@ function renderList(shown){
     return;
   }
   el.innerHTML="";
-  shown.forEach(p=>{
+  sortPoints(shown).forEach(p=>{
     const d=document.createElement('div');
     d.className="item"+(p.id===selectedId?" sel":"");
     d.innerHTML=
@@ -995,6 +1030,7 @@ document.querySelectorAll('.chip').forEach(ch=>{
   };
 });
 document.getElementById('search').oninput=e=>{ filter.q=e.target.value.trim(); render(); savePrefs(); };
+$('listSort').onchange=e=>{ filter.sort=e.target.value; render(); savePrefs(); };
 
 /* ============ レイヤー切替 ============ */
 document.getElementById('lyBase2').onchange=e=>{
@@ -1891,9 +1927,16 @@ function currentPlanForPDF(){
     district:$('planDistrict').value.trim(), data:currentPlanData() };
 }
 
+function sortPlans(plans){
+  const m=planSortMode||"date-asc";
+  const a=[...plans];
+  if(m==="date-desc")     a.sort((x,y)=>(y.date||"").localeCompare(x.date||"")||(y.createdAt||"").localeCompare(x.createdAt||""));
+  else if(m==="created")  a.sort((x,y)=>(y.createdAt||"").localeCompare(x.createdAt||""));
+  else                    a.sort((x,y)=>(x.date||"").localeCompare(y.date||"")||(x.createdAt||"").localeCompare(y.createdAt||""));  // date-asc（既定）
+  return a;
+}
 function renderPlanList(){
-  const box=$('planList'); const plans=loadPlans()
-    .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||"").localeCompare(a.createdAt||""));
+  const box=$('planList'); const plans=sortPlans(loadPlans());
   if(!plans.length){ box.innerHTML=`<div class="plan-empty">まだ保存された計画はありません。<br>上の欄に実施日・地区・名称を入れて<br>「現在の計画を保存」で記録できます。</div>`; return; }
   box.innerHTML="";
   plans.forEach(p=>{
@@ -1947,6 +1990,7 @@ function closePlanLib(){ $('planLib').classList.remove('open'); $('planBackdrop'
 $('planOpen').onclick=openPlanLib;
 $('planClose').onclick=closePlanLib;
 $('planBackdrop').onclick=closePlanLib;
+$('planSort').onchange=e=>{ planSortMode=e.target.value; $('planSort').value=planSortMode; renderPlanList(); savePrefs(); };
 $('planSaveBtn').onclick=()=>{
   if(!(sim.source||sim.fire||(sim.notes&&sim.notes.length))){ toast("保存する配置がありません（水元・火点・メモを置いてください）"); return; }
   const plans=loadPlans();
@@ -1967,6 +2011,7 @@ function savePrefs(){
     const c=map.getCenter();
     const prefs={
       district:filter.district, type:filter.type, status:filter.status, q:filter.q,
+      sort:filter.sort, planSort:planSortMode,
       cover:globalCover, hose:$('hoseR').value,
       layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
       simParams:{hose:sim.hoseLen, factor:sim.factor, legMax:sim.legMax},
@@ -1992,6 +2037,9 @@ function applyPrefs(p){
   filter.district=p.district||"all"; filter.q=p.q||"";
   $('search').value=filter.q;
   syncChips();
+  // 並び替え
+  filter.sort=p.sort||"name-asc"; $('listSort').value=filter.sort;
+  planSortMode=p.planSort||"date-asc"; $('planSort').value=planSortMode;
   // 水利基準円の半径
   if(p.cover){ globalCover=p.cover;
     document.querySelectorAll('#coverSeg button').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.r)===globalCover)); }
