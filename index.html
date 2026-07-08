@@ -905,7 +905,7 @@ function render(){
   const shown = points.filter(passFilter);
   shown.forEach(p=>{
     const m = L.marker([p.lat,p.lng],{icon:makeIcon(p), draggable:moveMode});
-    m.on('click',()=>openEditor(p.id));
+    m.on('click',()=>{ if(!moveMode) openEditor(p.id); });  // 位置調整中はタップで編集を開かない（ドラッグ専用）
     m.bindTooltip(p.name||"(無名)",{direction:'top',offset:[0,-24]});
     if(moveMode) m.on('dragend',()=>updatePointPosition(p, m.getLatLng()));
     markerLayer.addLayer(m);
