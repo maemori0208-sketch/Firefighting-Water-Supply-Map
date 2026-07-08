@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-08T02:31:27.559Z",
+  "exportedAt": "2026-07-08T04:22:53.016Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -157,6 +157,20 @@
       "cover": null,
       "hose": null,
       "updated": "2026-07-08T02:29:17.707Z"
+    },
+    {
+      "id": "mrbkjlswwhn9r",
+      "type": "防火水槽",
+      "name": "松沢字上橋ツ辺",
+      "lat": 37.485055,
+      "lng": 140.495395,
+      "status": "正常",
+      "notes": "",
+      "district": "松沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-08T04:20:48.979Z"
     }
   ],
   "plans": [
