@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-09T12:15:21.843Z",
+  "exportedAt": "2026-07-09T12:54:36.622Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -394,7 +394,7 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:11:36.059Z"
+      "updated": "2026-07-09T12:40:59.725Z"
     },
     {
       "id": "mrdgx1ot0eg8m",
@@ -408,7 +408,63 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:14:30.802Z"
+      "updated": "2026-07-09T12:41:03.712Z"
+    },
+    {
+      "id": "mrdhu5b3cdwtj",
+      "type": "防火水槽",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.485862,
+      "lng": 140.463359,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-09T12:40:56.232Z"
+    },
+    {
+      "id": "mrdhxl7ct3ibi",
+      "type": "消火栓",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.486539,
+      "lng": 140.463263,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-09T12:42:11.840Z"
+    },
+    {
+      "id": "mrdi56txtkff1",
+      "type": "防火水槽",
+      "name": "三春町七草木宮信田",
+      "lat": 37.483436,
+      "lng": 140.481572,
+      "status": "未確認",
+      "notes": "",
+      "district": "七草木",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-09T12:48:53.574Z"
+    },
+    {
+      "id": "mrdiabs5c18ry",
+      "type": "消火栓",
+      "name": "稲沢字滑津",
+      "lat": 37.499976,
+      "lng": 140.486019,
+      "status": "未確認",
+      "notes": "",
+      "district": "稲沢",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-09T12:52:02.178Z"
     }
   ],
   "plans": [
