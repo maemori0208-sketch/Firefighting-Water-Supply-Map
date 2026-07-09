@@ -713,6 +713,10 @@
           <span class="ds-ic">⬆️</span>
           <span class="ds-tx"><b>JSONを読み込み（復元・取り込み）</b><small>書き出したファイルから復元します。既存データと統合も可能。</small></span>
         </button>
+        <button class="ds-item" id="dsMerge">
+          <span class="ds-ic">🧩</span>
+          <span class="ds-tx"><b>複数のバックアップを統合（マージ）</b><small>各自が書き出したJSONを複数まとめて選択。同じ地点は更新日が新しい方を採用します。</small></span>
+        </button>
         <button class="ds-item" id="dsCsv">
           <span class="ds-ic">📄</span>
           <span class="ds-tx"><b>CSVで書き出し（一覧表）</b><small>Excel等で開ける点検一覧。写真は含みません。</small></span>
@@ -788,6 +792,7 @@
 </div>
 
 <input type="file" id="fileImport" accept="application/json,.json" class="file-hidden">
+<input type="file" id="mergeImport" accept="application/json,.json" multiple class="file-hidden">
 <input type="file" id="photoInput" accept="image/*" multiple class="file-hidden">
 <div id="toast"></div>
 <!-- 現況写真の拡大表示（アプリ内ポップアップ） -->
@@ -1292,6 +1297,7 @@ $('dataBackdrop').onclick=closeDataSheet;
 /* 各操作（実行前にシートを閉じる） */
 $('dsExport').onclick=()=>{ closeDataSheet(); exportJSON(); };
 $('dsImport').onclick=()=>{ closeDataSheet(); $('fileImport').click(); };
+$('dsMerge').onclick =()=>{ closeDataSheet(); $('mergeImport').click(); };
 $('dsCsv').onclick   =()=>{ closeDataSheet(); exportCSV(); };
 $('dsShared').onclick=()=>{ closeDataSheet(); reloadSharedData(); };
 $('dsClear').onclick =()=>{
@@ -1360,6 +1366,49 @@ document.getElementById('fileImport').onchange=e=>{
     }catch(err){ toast("読み込めませんでした（JSON形式をご確認ください）"); }
   };
   r.readAsText(f); e.target.value="";
+};
+/* 複数のバックアップJSONをまとめて統合（同一IDは更新日が新しい方を採用）*/
+document.getElementById('mergeImport').onchange=async e=>{
+  const files=[...e.target.files]; e.target.value="";
+  if(!files.length) return;
+  // 全ファイルを読み込んで地点・計画を集約
+  const allPoints=[], allPlans=[]; let ng=0;
+  for(const f of files){
+    try{
+      const raw=JSON.parse(await f.text());
+      if(Array.isArray(raw)) allPoints.push(...raw);
+      else if(raw && Array.isArray(raw.points)){
+        allPoints.push(...raw.points);
+        if(Array.isArray(raw.plans)) allPlans.push(...raw.plans);
+      } else ng++;
+    }catch(err){ ng++; }
+  }
+  if(!allPoints.length && !allPlans.length){
+    toast(ng?"読み込めるデータがありませんでした（JSON形式をご確認ください）":"データが空でした"); return;
+  }
+  if(!confirm(files.length+"個のファイルを現在のデータに統合します。\n同じ地点（同一ID）は更新日が新しい方を採用します。よろしいですか？")) return;
+  // 地点：IDごとに更新日が新しい方を採用（現在のデータも対象）
+  const byId=new Map(); points.forEach(p=>byId.set(p.id, p));
+  let added=0, updated=0;
+  allPoints.forEach(p=>{
+    if(!p || !p.id){ if(p){ p.id=uid(); byId.set(p.id,p); added++; } return; }
+    const ex=byId.get(p.id);
+    if(!ex){ byId.set(p.id, p); added++; }
+    else if((p.updated||"") > (ex.updated||"")){ byId.set(p.id, p); updated++; }
+  });
+  points=[...byId.values()];
+  // 訓練計画：IDごとに更新日/作成日が新しい方を採用
+  const pmap=new Map(); loadPlans().forEach(pl=>pmap.set(pl.id, pl)); let planAdd=0;
+  allPlans.forEach(pl=>{
+    if(!pl || !pl.id) return;
+    const ex=pmap.get(pl.id);
+    if(!ex){ pmap.set(pl.id, pl); planAdd++; }
+    else if((pl.updatedAt||pl.createdAt||"") > (ex.updatedAt||ex.createdAt||"")){ pmap.set(pl.id, pl); }
+  });
+  storePlans([...pmap.values()]);
+  save(); render();
+  toast(`統合しました：地点 追加${added}・更新${updated}（計${points.length}件）`
+    + (planAdd?` ／ 計画 追加${planAdd}`:"") + (ng?` ／ 読込不可 ${ng}ファイル`:""));
 };
 function exportCSV(){
   const head=["種別","地区","名称","状態","メモ","緯度","経度","水利基準半径m","展張半径m","更新日時","写真枚数"];
