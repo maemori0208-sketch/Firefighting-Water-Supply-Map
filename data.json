@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-09T12:03:57.249Z",
+  "exportedAt": "2026-07-09T12:15:21.843Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -381,6 +381,34 @@
       "cover": null,
       "hose": null,
       "updated": "2026-07-09T11:59:22.753Z"
+    },
+    {
+      "id": "mrdgtd5hppzu5",
+      "type": "消火栓",
+      "name": "白岩字宮田",
+      "lat": 37.484909,
+      "lng": 140.459476,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-09T12:11:36.059Z"
+    },
+    {
+      "id": "mrdgx1ot0eg8m",
+      "type": "消火栓",
+      "name": "白岩字宮田",
+      "lat": 37.485611,
+      "lng": 140.455146,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "updated": "2026-07-09T12:14:30.802Z"
     }
   ],
   "plans": [
