@@ -2230,9 +2230,17 @@ function renderPlanMapImage(d, opt){
       tiles.push({tx,ty});
   const load=t=>new Promise(res=>{
     const img=new Image(); img.crossOrigin='anonymous';
-    img.onload=()=>{ try{ ctx.drawImage(img, Math.round(t.tx*256-x0), Math.round(t.ty*256-y0)); }catch(e){} res(); };
-    img.onerror=()=>res();
+    let done=false;
+    const draw=()=>{ try{ ctx.drawImage(img, Math.round(t.tx*256-x0), Math.round(t.ty*256-y0)); }catch(e){} };
+    // 2回目以降の出力ではタイルがキャッシュから返され、iOS Safariでは
+    // crossOrigin付き画像のonload/onerrorが発火しないことがある。
+    // onload待ちに加え、キャッシュ済み(complete)の即時解決とタイムアウトの安全弁で必ず解決させる。
+    const finish=(ok)=>{ if(done) return; done=true; clearTimeout(tm); if(ok) draw(); res(); };
+    const tm=setTimeout(()=>finish(false), 6000);   // 応答しないタイルがあっても止めない
+    img.onload=()=>finish(true);
+    img.onerror=()=>finish(false);
     img.src=`https://cyberjapandata.gsi.go.jp/xyz/${base.u}/${z}/${t.tx}/${t.ty}.${base.ext}`;
+    if(img.complete) finish(true);                  // キャッシュ済み画像はonloadが発火しない場合がある
   });
   return Promise.all(tiles.map(load)).then(()=>{
     // 既設水利（背景の点）
