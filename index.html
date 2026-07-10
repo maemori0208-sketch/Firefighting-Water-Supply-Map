@@ -2640,6 +2640,29 @@ window.addEventListener('orientationchange', ()=>{
 });
 if(window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
 
+/* standalone(ホーム画面)で、スクロールしない部分（ヘッダー・メニュー枠など）をドラッグしたときに
+   ウェブビュー全体がラバーバンドで動くのを防ぐ。地図(Leaflet)・内部スクロール・入力欄は対象外にして、
+   それ以外の場所での touchmove だけを無効化する。 */
+(function preventRubberBand(){
+  let allow=false;
+  const isScrollable=(el)=>{
+    const st=getComputedStyle(el), oy=st.overflowY, ox=st.overflowX;
+    return ((oy==='auto'||oy==='scroll') && el.scrollHeight>el.clientHeight)
+        || ((ox==='auto'||ox==='scroll') && el.scrollWidth>el.clientWidth);
+  };
+  const canMove=(t)=>{
+    for(let el=t; el && el.nodeType===1 && el!==document.body; el=el.parentElement){
+      const tag=el.tagName;
+      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable) return true; // 文字選択・入力を妨げない
+      if(el.classList && el.classList.contains('leaflet-container')) return true;             // 地図はLeafletに任せる
+      if(isScrollable(el)) return true;                                                       // 実際にスクロールできる要素
+    }
+    return false;
+  };
+  document.addEventListener('touchstart', (e)=>{ allow = (e.touches && e.touches.length>1) || canMove(e.target); }, {passive:true});
+  document.addEventListener('touchmove',  (e)=>{ if(!allow && e.cancelable) e.preventDefault(); }, {passive:false});
+})();
+
 /* ============ 起動 ============ */
 (async function init(){
   let ok = load();                        // 端末内の保存データを優先
