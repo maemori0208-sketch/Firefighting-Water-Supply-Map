@@ -446,6 +446,27 @@
   .ds-danger:hover{background:#fdeeec}
   .ds-danger:active{background:#fbe0dc}
 
+  /* ---- 点検記録 ---- */
+  .insp-summary{font-size:11.5px; color:var(--muted); margin-bottom:6px}
+  .insp-add{width:100%; padding:9px; border:1px dashed var(--navy-soft); border-radius:8px;
+    background:#f2f6fc; color:var(--navy); font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit}
+  .insp-add:hover{background:#e7f0fb}
+  .insp-list{margin-top:8px; display:flex; flex-direction:column; gap:6px}
+  .insp-row{display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line);
+    border-radius:9px; cursor:pointer; background:#fff}
+  .insp-row:hover{background:var(--bg)}
+  .insp-row .insp-date{font-size:12.5px; font-weight:700; color:var(--navy); white-space:nowrap; font-variant-numeric:tabular-nums}
+  .insp-row .insp-sum{flex:1; min-width:0; font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #inspItems .fld{margin-bottom:11px}
+  .ibtns{display:flex; gap:6px; flex-wrap:wrap}
+  .ibtn{flex:1; min-width:calc(33% - 4px); padding:9px 4px; border:1.5px solid var(--line); border-radius:9px;
+    background:#fff; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--ink); font-family:inherit}
+  .ibtn.on{background:var(--navy); border-color:var(--navy); color:#fff}
+  .insp-suggest{font-size:11px; color:var(--muted); margin-top:5px}
+  .insp-ft{display:flex; gap:10px; margin-top:6px}
+  #inspSheet, #inspBackdrop{z-index:1360}
+  #inspBackdrop{z-index:1350}
+
   /* ---- ヘルプ本文 ---- */
   .help-intro{font-size:12.5px; color:var(--muted); line-height:1.6; margin:0 2px 2px}
   .help-sec{margin-top:6px}
@@ -642,6 +663,12 @@
           </div>
         </div>
         <div class="fld">
+          <label>点検記録</label>
+          <div id="edInspSummary" class="insp-summary"></div>
+          <button class="insp-add" id="edAddInsp" type="button">＋ 点検を記録</button>
+          <div id="edInspList" class="insp-list"></div>
+        </div>
+        <div class="fld">
           <label>破損・現状メモ</label>
           <textarea id="edNotes" placeholder="例）蓋の縁が欠損、標識ポール傾き、周囲に駐車で部署困難 等"></textarea>
         </div>
@@ -725,6 +752,34 @@
           <span class="ds-ic">🗑️</span>
           <span class="ds-tx"><b>全データを削除</b><small>この端末の全地点を消去します。元に戻せません。</small></span>
         </button>
+      </div>
+    </div>
+
+    <!-- 点検の記録 -->
+    <div class="backdrop" id="inspBackdrop"></div>
+    <div id="inspSheet" class="sheet">
+      <div class="ds-hd"><h2 id="inspTitle">点検を記録</h2><button id="inspClose" title="閉じる">×</button></div>
+      <div class="ds-bd">
+        <div class="two">
+          <div class="fld"><label>点検日</label><input type="date" id="inspDate"></div>
+          <div class="fld"><label>点検者（任意）</label><input type="text" id="inspBy" placeholder="例）山田"></div>
+        </div>
+        <div id="inspItems"></div>
+        <div class="fld">
+          <label>総合判定</label>
+          <div class="statusbtns" id="inspResult">
+            <div class="sbtn" data-v="正常">正常</div>
+            <div class="sbtn" data-v="要点検">要点検</div>
+            <div class="sbtn" data-v="破損">破損</div>
+            <div class="sbtn" data-v="未確認">未確認</div>
+          </div>
+          <div class="insp-suggest" id="inspSuggest"></div>
+        </div>
+        <div class="fld"><label>メモ（任意）</label><textarea id="inspMemo" placeholder="所見・特記事項"></textarea></div>
+        <div class="insp-ft">
+          <button class="btn del" id="inspDel" style="display:none">削除</button>
+          <button class="btn save" id="inspSave">記録する</button>
+        </div>
       </div>
     </div>
 
@@ -880,7 +935,7 @@ function seed(){
 }
 function mk(type,name,lat,lng,status,notes,district){
   return {id:uid(), type, name, lat, lng, status, notes:notes||"", district:district||"",
-    photos:[], cover:null, hose:null, updated:new Date().toISOString()};
+    photos:[], cover:null, hose:null, inspections:[], lastInspected:null, updated:new Date().toISOString()};
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
@@ -1155,7 +1210,7 @@ function openEditor(id, isNew){
   document.getElementById('edHose').value = p.hose!=null?p.hose:"";
   document.getElementById('edHose').placeholder = document.getElementById('hoseR').value;
   document.getElementById('edUpdated').textContent = fmtDate(p.updated);
-  setType(editing.type); setStatus(editing.status); renderPhotos();
+  setType(editing.type); setStatus(editing.status); renderPhotos(); renderInspList();
   editor.classList.add('open'); backdrop.classList.add('show');
   render();
 }
@@ -1241,6 +1296,170 @@ document.getElementById('edDelete').onclick=()=>{
   points=points.filter(x=>x.id!==editing.id);
   save(); render(); closeEditor(); toast("削除しました");
 };
+
+/* ============ 点検記録 ============ */
+/* 種別ごとの点検項目（good=正常時の値、short=一覧用の短縮ラベル） */
+const INSP_ITEMS = {
+  "消火栓":[
+    {k:"rust",   label:"外観・錆",       short:"錆",   opts:["なし","軽微","あり"],    good:"なし"},
+    {k:"leak",   label:"外観・漏水",     short:"漏水", opts:["なし","あり"],           good:"なし"},
+    {k:"sign",   label:"標識（ポール・看板）", short:"標識", opts:["良好","要注意","不良"], good:"良好"},
+    {k:"water",  label:"放水・通水",     short:"通水", opts:["出る","出ない","未実施"],good:"出る"},
+    {k:"quality",label:"放水・水質",     short:"水質", opts:["清明","赤さび","未実施"],good:"清明"},
+  ],
+  "防火水槽":[
+    {k:"mesh",   label:"金網・柵",             short:"金網",   opts:["良好","要注意","不良"], good:"良好"},
+    {k:"intake", label:"吸管投入口・採水口",   short:"採水口", opts:["良好","要注意","不良"], good:"良好"},
+    {k:"base",   label:"躯体・土台（クラック）",short:"土台",  opts:["良好","要注意","不良"], good:"良好"},
+    {k:"sign",   label:"標識（ポール・看板）", short:"標識",   opts:["良好","要注意","不良"], good:"良好"},
+    {k:"volume", label:"貯水量",              short:"貯水",   opts:["満水","減水","不明"],   good:"満水"},
+  ]
+};
+function inspDefs(type){ return INSP_ITEMS[type] || INSP_ITEMS["消火栓"]; }
+/* 項目から総合判定を自動提案 */
+function suggestResult(type, v){
+  const done = inspDefs(type).some(d=>v[d.k]);
+  if(!done) return "未確認";
+  const signBad = v.sign==="要注意" || v.sign==="不良";   // 標識不良は要点検扱い
+  if(type==="防火水槽"){
+    const vals=[v.mesh,v.intake,v.base];
+    if(vals.includes("不良")) return "破損";
+    if(vals.includes("要注意")||v.volume==="減水"||signBad) return "要点検";
+    return "正常";
+  }
+  if(v.leak==="あり"||v.water==="出ない") return "破損";
+  if(v.rust==="あり"||v.rust==="軽微"||v.quality==="赤さび"||signBad) return "要点検";
+  return "正常";
+}
+/* 最新の点検判定を地点の状態へ反映 */
+function applyLatestStatus(p){
+  const ins=(p.inspections||[]).slice().sort((a,b)=>
+    (b.date||"").localeCompare(a.date||"")||((b.updatedAt||b.createdAt||"")).localeCompare(a.updatedAt||a.createdAt||""));
+  if(ins.length){ p.status=ins[0].result||p.status; p.lastInspected=ins[0].date||null; }
+}
+/* 一覧用：異常のある項目だけを短くまとめる */
+function inspItemsSummary(x){
+  const notable=inspDefs(x.type).filter(d=>{
+    const val=x.items&&x.items[d.k];
+    return val && val!==d.good && val!=="未実施" && val!=="不明";
+  }).map(d=>d.short+":"+x.items[d.k]);
+  return notable.length ? notable.join("・") : "異常なし";
+}
+
+/* 編集パネル内の点検履歴を描画 */
+function renderInspList(){
+  const list=$('edInspList'), sum=$('edInspSummary');
+  const ins=((editing&&editing.inspections)||[]).slice().sort((a,b)=>
+    (b.date||"").localeCompare(a.date||"")||((b.createdAt||"")).localeCompare(a.createdAt||""));
+  sum.textContent = ins.length
+    ? `直近 ${ins[0].date}（${ins[0].result}）／ 記録 ${ins.length} 回` : "まだ点検記録がありません";
+  list.innerHTML="";
+  ins.forEach(x=>{
+    const row=document.createElement('div'); row.className="insp-row";
+    row.innerHTML=`<span class="insp-date">${x.date||"—"}</span>`
+      +`<span class="st-pill" style="background:${STATUS_COLOR[x.result]||STATUS_COLOR['未確認']}">${x.result||""}</span>`
+      +`<span class="insp-sum">${escapeHtml(inspItemsSummary(x))}</span>`;
+    row.onclick=()=>openInspForm(x.id);
+    list.appendChild(row);
+  });
+}
+
+/* 点検フォーム */
+let inspForm={id:null,type:"消火栓",values:{},result:null,manual:false};
+function buildInspItems(type,values){
+  const box=$('inspItems'); box.innerHTML="";
+  inspDefs(type).forEach(it=>{
+    const fld=document.createElement('div'); fld.className="fld";
+    const lab=document.createElement('label'); lab.textContent=it.label; fld.appendChild(lab);
+    const row=document.createElement('div'); row.className="ibtns";
+    it.opts.forEach(o=>{
+      const b=document.createElement('button'); b.type="button"; b.className="ibtn"+(values[it.k]===o?" on":""); b.textContent=o;
+      b.onclick=()=>{ values[it.k]=o; row.querySelectorAll('.ibtn').forEach(x=>x.classList.toggle('on',x===b)); onInspItemsChange(); };
+      row.appendChild(b);
+    });
+    fld.appendChild(row); box.appendChild(fld);
+  });
+}
+function setInspResult(v){ inspForm.result=v;
+  document.querySelectorAll('#inspResult .sbtn').forEach(b=>b.classList.toggle('on',b.dataset.v===v)); }
+function onInspItemsChange(){
+  const sug=suggestResult(inspForm.type, inspForm.values);
+  $('inspSuggest').textContent="自動判定の目安："+sug+"（ボタンで変更できます）";
+  if(!inspForm.manual) setInspResult(sug);
+}
+document.querySelectorAll('#inspResult .sbtn').forEach(b=>b.onclick=()=>{ inspForm.manual=true; setInspResult(b.dataset.v); });
+function openInspForm(insId){
+  if(!editing) return;
+  const type=editing.type||"消火栓";
+  const ex=insId ? (editing.inspections||[]).find(x=>x.id===insId) : null;
+  inspForm={ id: ex?ex.id:null, type, values: ex?Object.assign({},ex.items):{}, result: ex?ex.result:null, manual:!!ex };
+  $('inspTitle').textContent = ex ? "点検の編集" : "点検を記録";
+  $('inspDate').value = ex?ex.date : new Date().toISOString().slice(0,10);
+  $('inspBy').value = ex?(ex.inspector||"") : "";
+  $('inspMemo').value = ex?(ex.memo||"") : "";
+  buildInspItems(type, inspForm.values);
+  onInspItemsChange();
+  if(ex) setInspResult(ex.result);
+  $('inspDel').style.display = ex ? "" : "none";
+  $('inspSheet').classList.add('open'); $('inspBackdrop').classList.add('show');
+}
+function closeInspForm(){ $('inspSheet').classList.remove('open'); $('inspBackdrop').classList.remove('show'); }
+function commitEditing(){
+  const idx=points.findIndex(x=>x.id===editing.id);
+  if(idx>=0){ points[idx]=JSON.parse(JSON.stringify(editing)); save(); render(); }
+}
+$('edAddInsp').onclick=()=>openInspForm(null);
+$('inspClose').onclick=closeInspForm;
+$('inspBackdrop').onclick=closeInspForm;
+$('inspSave').onclick=()=>{
+  const now=new Date().toISOString();
+  const ex=inspForm.id ? (editing.inspections||[]).find(x=>x.id===inspForm.id) : null;
+  const ins={
+    id: inspForm.id || ("ins_"+uid()),
+    type: inspForm.type,
+    date: $('inspDate').value || now.slice(0,10),
+    inspector: $('inspBy').value.trim(),
+    items: Object.assign({}, inspForm.values),
+    result: inspForm.result || suggestResult(inspForm.type, inspForm.values),
+    memo: $('inspMemo').value.trim(),
+    createdAt: ex ? (ex.createdAt||now) : now,
+    updatedAt: now
+  };
+  editing.inspections = editing.inspections || [];
+  const i=editing.inspections.findIndex(x=>x.id===ins.id);
+  if(i>=0) editing.inspections[i]=ins; else editing.inspections.push(ins);
+  applyLatestStatus(editing);
+  editing.updated=now;
+  commitEditing();
+  setStatus(editing.status);
+  $('edUpdated').textContent=fmtDate(editing.updated);
+  renderInspList(); closeInspForm();
+  toast(inspForm.id ? "点検を更新しました" : "点検を記録しました");
+};
+$('inspDel').onclick=()=>{
+  if(!inspForm.id || !confirm("この点検記録を削除します。よろしいですか？")) return;
+  editing.inspections=(editing.inspections||[]).filter(x=>x.id!==inspForm.id);
+  applyLatestStatus(editing); editing.updated=new Date().toISOString();
+  commitEditing();
+  setStatus(editing.status); $('edUpdated').textContent=fmtDate(editing.updated);
+  renderInspList(); closeInspForm(); toast("点検記録を削除しました");
+};
+/* 統合用：点検履歴をID単位で和集合（新しい方を採用） */
+function unionInspections(a,b){
+  const m=new Map();
+  [].concat(a||[],b||[]).forEach(x=>{ if(!x) return; const id=x.id||("ins_"+uid());
+    const ex=m.get(id), t=x.updatedAt||x.createdAt||"";
+    if(!ex || t > (ex.updatedAt||ex.createdAt||"")) m.set(id, x);
+  });
+  return [...m.values()].sort((x,y)=>(x.date||"").localeCompare(y.date||""));
+}
+/* 統合用：同一地点をマージ（本体は更新日が新しい方＋点検は和集合） */
+function mergePoints(a,b){
+  const base = (b.updated||"") > (a.updated||"") ? Object.assign({},b) : Object.assign({},a);
+  base.inspections = unionInspections(a.inspections, b.inspections);
+  applyLatestStatus(base);
+  return base;
+}
 function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso);
   return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0'); }
 
@@ -1382,14 +1601,14 @@ document.getElementById('mergeImport').onchange=async e=>{
     toast(ng?"読み込めるデータがありませんでした（JSON形式をご確認ください）":"データが空でした"); return;
   }
   if(!confirm(files.length+"個のファイルを現在のデータに統合します。\n同じ地点（同一ID）は更新日が新しい方を採用します。よろしいですか？")) return;
-  // 地点：IDごとに更新日が新しい方を採用（現在のデータも対象）
+  // 地点：IDごとに本体は更新日が新しい方＋点検履歴は和集合でマージ（現在のデータも対象）
   const byId=new Map(); points.forEach(p=>byId.set(p.id, p));
   let added=0, updated=0;
   allPoints.forEach(p=>{
     if(!p || !p.id){ if(p){ p.id=uid(); byId.set(p.id,p); added++; } return; }
     const ex=byId.get(p.id);
     if(!ex){ byId.set(p.id, p); added++; }
-    else if((p.updated||"") > (ex.updated||"")){ byId.set(p.id, p); updated++; }
+    else { byId.set(p.id, mergePoints(ex, p)); updated++; }
   });
   points=[...byId.values()];
   // 訓練計画：IDごとに更新日/作成日が新しい方を採用
