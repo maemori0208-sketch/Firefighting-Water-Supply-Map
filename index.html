@@ -2612,14 +2612,17 @@ function setAppHeight(){
   if(window.scrollY||window.scrollX) window.scrollTo(0,0);
   if(typeof map !== 'undefined') map.invalidateSize();
 }
-/* iOS standaloneで回転後に position:fixed 全体が数mm上へずれる（＝ビューポートのアンカーや
-   env(safe-area-inset-*) が古い値のまま残る）現象を、#appを一瞬だけ再レイアウトして取り直す。 */
+/* iOS standaloneで回転後に position:fixed 全体が数mm上へずれる現象の対策。
+   これはDOMのレイアウトではなく、ビューポート(表示のアンカー)が回転後にわずかにパンした状態のため、
+   #appの付け替えでは戻らない。ルート(html/body)の固定を一瞬だけ解除→スクロール位置を0に戻す→再固定
+   することで、ビューポートのスクロール基準をリセットし、横→縦のパンずれも解消する。 */
 function reanchorApp(){
-  const a=(typeof $==='function') ? $('app') : document.getElementById('app');
-  if(!a) return;
-  a.style.display='none';
-  void a.offsetHeight;        // 強制リフロー（この隙間にレイアウトが確定し直す）
-  a.style.display='';
+  const de=document.documentElement, b=document.body;
+  const pd=de.style.position, pb=b.style.position;
+  de.style.position='static'; b.style.position='static';   // CSSのposition:fixedを一時的に外す
+  window.scrollTo(0,0);
+  void b.offsetHeight;                                      // 強制リフロー
+  de.style.position=pd; b.style.position=pb;               // 元(fixed)へ戻す
   window.scrollTo(0,0);
   setAppHeight();
 }
