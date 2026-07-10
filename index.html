@@ -2644,23 +2644,34 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize', setAp
    ウェブビュー全体がラバーバンドで動くのを防ぐ。地図(Leaflet)・内部スクロール・入力欄は対象外にして、
    それ以外の場所での touchmove だけを無効化する。 */
 (function preventRubberBand(){
-  let allow=false;
-  const isScrollable=(el)=>{
-    const st=getComputedStyle(el), oy=st.overflowY, ox=st.overflowX;
-    return ((oy==='auto'||oy==='scroll') && el.scrollHeight>el.clientHeight)
-        || ((ox==='auto'||ox==='scroll') && el.scrollWidth>el.clientWidth);
+  let mode='block';   // 'block'=常に抑止 / 'free'=常に許可(地図・入力・ピンチ) / 要素=スクロール可（端のみ抑止）
+  let startY=0;
+  const isScrollableY=(el)=>{
+    const oy=getComputedStyle(el).overflowY;
+    return (oy==='auto'||oy==='scroll') && el.scrollHeight>el.clientHeight;
   };
-  const canMove=(t)=>{
+  const classify=(t)=>{
     for(let el=t; el && el.nodeType===1 && el!==document.body; el=el.parentElement){
       const tag=el.tagName;
-      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable) return true; // 文字選択・入力を妨げない
-      if(el.classList && el.classList.contains('leaflet-container')) return true;             // 地図はLeafletに任せる
-      if(isScrollable(el)) return true;                                                       // 実際にスクロールできる要素
+      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable) return 'free'; // 文字選択・入力を妨げない
+      if(el.classList && el.classList.contains('leaflet-container')) return 'free';             // 地図はLeafletに任せる
+      if(isScrollableY(el)) return el;                                                          // 実際に縦スクロールできる要素
     }
-    return false;
+    return 'block';
   };
-  document.addEventListener('touchstart', (e)=>{ allow = (e.touches && e.touches.length>1) || canMove(e.target); }, {passive:true});
-  document.addEventListener('touchmove',  (e)=>{ if(!allow && e.cancelable) e.preventDefault(); }, {passive:false});
+  document.addEventListener('touchstart', (e)=>{
+    startY = e.touches[0] ? e.touches[0].clientY : 0;
+    mode = (e.touches && e.touches.length>1) ? 'free' : classify(e.target);
+  }, {passive:true});
+  document.addEventListener('touchmove', (e)=>{
+    if(mode==='free') return;
+    if(mode==='block'){ if(e.cancelable) e.preventDefault(); return; }
+    // スクロール可能要素：内部スクロールは許可しつつ、端を越えて引っぱる方向だけ止めてページのバウンスを防ぐ
+    const s=mode, y=e.touches[0]?e.touches[0].clientY:startY, dy=y-startY;
+    const atTop = s.scrollTop<=0;
+    const atBottom = s.scrollTop + s.clientHeight >= s.scrollHeight-1;
+    if(((atTop && dy>0) || (atBottom && dy<0)) && e.cancelable) e.preventDefault();
+  }, {passive:false});
 })();
 
 /* ============ 起動 ============ */
