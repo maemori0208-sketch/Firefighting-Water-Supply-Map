@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-10T03:21:28.593Z",
+  "exportedAt": "2026-07-10T04:00:48.647Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
       "type": "消火栓",
-      "name": "松沢字古城ケ谷戸-旧三松屋前",
+      "name": "古城ケ谷戸-旧三松屋前",
       "lat": 37.492894,
       "lng": 140.48427,
       "status": "正常",
@@ -14,12 +14,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:07:38.726Z"
+      "updated": "2026-07-10T03:58:32.614Z"
     },
     {
       "id": "mra2os7v03080",
       "type": "消火栓",
-      "name": "松沢字弥五郎内-松沢運動場傍",
+      "name": "弥五郎内-松沢運動場傍",
       "lat": 37.486899,
       "lng": 140.483025,
       "status": "正常",
@@ -28,12 +28,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:20:41.467Z"
+      "updated": "2026-07-10T03:59:51.448Z"
     },
     {
       "id": "mra2t5zmyz51m",
       "type": "防火水槽",
-      "name": "松沢字弥五郎内",
+      "name": "弥五郎内",
       "lat": 37.488433,
       "lng": 140.483721,
       "status": "要点検",
@@ -44,12 +44,12 @@
       ],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:00:16.987Z"
+      "updated": "2026-07-10T03:59:36.792Z"
     },
     {
       "id": "mra2xdt4h59th",
       "type": "防火水槽",
-      "name": "松沢字平河内",
+      "name": "平河内",
       "lat": 37.484092,
       "lng": 140.477975,
       "status": "正常",
@@ -58,12 +58,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T11:59:41.032Z"
+      "updated": "2026-07-10T03:59:22.082Z"
     },
     {
       "id": "mra3rxi4jpky6",
       "type": "防火水槽",
-      "name": "松沢字平郎内",
+      "name": "平郎内",
       "lat": 37.483898,
       "lng": 140.460986,
       "status": "正常",
@@ -72,12 +72,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T11:59:18.728Z"
+      "updated": "2026-07-10T03:59:31.457Z"
     },
     {
       "id": "mrai4hmd913ly",
       "type": "消火栓",
-      "name": "松沢字平河内-三区東部集会所傍",
+      "name": "平河内-三区東部集会所傍",
       "lat": 37.48413,
       "lng": 140.478085,
       "status": "正常",
@@ -86,12 +86,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:20:49.223Z"
+      "updated": "2026-07-10T03:59:26.841Z"
     },
     {
       "id": "mrai8efxbggrt",
       "type": "防火水槽",
-      "name": "松沢字古城ケ谷戸",
+      "name": "古城ケ谷戸",
       "lat": 37.492915,
       "lng": 140.482408,
       "status": "正常",
@@ -100,12 +100,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:05:08.370Z"
+      "updated": "2026-07-10T03:58:19.061Z"
     },
     {
       "id": "mrai9fgzv4q1w",
       "type": "防火水槽",
-      "name": "松沢字柳作",
+      "name": "柳作",
       "lat": 37.488276,
       "lng": 140.480418,
       "status": "正常",
@@ -114,12 +114,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:02:49.546Z"
+      "updated": "2026-07-10T03:59:55.435Z"
     },
     {
       "id": "mraicz9ewyd94",
       "type": "消火栓",
-      "name": "松沢字柳作",
+      "name": "柳作",
       "lat": 37.487761,
       "lng": 140.479801,
       "status": "正常",
@@ -128,12 +128,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:02:42.673Z"
+      "updated": "2026-07-10T04:00:00.319Z"
     },
     {
       "id": "mrbgbghgvupyd",
       "type": "消火栓",
-      "name": "松沢字糀屋",
+      "name": "糀屋",
       "lat": 37.486571,
       "lng": 140.488808,
       "status": "正常",
@@ -142,12 +142,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:10:53.970Z"
+      "updated": "2026-07-10T04:00:05.386Z"
     },
     {
       "id": "mrbglpaxtdetz",
       "type": "防火水槽",
-      "name": "松沢字中里",
+      "name": "中里",
       "lat": 37.489085,
       "lng": 140.487553,
       "status": "正常",
@@ -156,12 +156,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:01:03.478Z"
+      "updated": "2026-07-10T03:59:11.656Z"
     },
     {
       "id": "mrbkjlswwhn9r",
       "type": "防火水槽",
-      "name": "松沢字上橋ツ辺",
+      "name": "上橋ツ辺",
       "lat": 37.485055,
       "lng": 140.495395,
       "status": "正常",
@@ -170,12 +170,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:01:47.758Z"
+      "updated": "2026-07-10T03:58:43.766Z"
     },
     {
       "id": "mrcusfhx1czgv",
       "type": "消火栓",
-      "name": "松沢字上橋ツ辺",
+      "name": "上橋ツ辺",
       "lat": 37.484747,
       "lng": 140.495189,
       "status": "正常",
@@ -184,12 +184,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:01:44.855Z"
+      "updated": "2026-07-10T03:58:49.390Z"
     },
     {
       "id": "mrcuuqerb7cai",
       "type": "消火栓",
-      "name": "松沢字上橋ツ辺-荒川商店前",
+      "name": "上橋ツ辺-荒川商店前",
       "lat": 37.483994,
       "lng": 140.49668,
       "status": "正常",
@@ -198,12 +198,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T02:27:42.107Z"
+      "updated": "2026-07-10T03:58:55.471Z"
     },
     {
       "id": "mrde8x0rcp6td",
       "type": "消火栓",
-      "name": "松沢字下橋ツ辺",
+      "name": "下橋ツ辺",
       "lat": 37.485488,
       "lng": 140.497018,
       "status": "正常",
@@ -212,12 +212,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:12:52.327Z"
+      "updated": "2026-07-10T03:58:09.549Z"
     },
     {
       "id": "mrdeb09a8pym4",
       "type": "防火水槽",
-      "name": "松沢字ニツ橋",
+      "name": "ニツ橋",
       "lat": 37.486131,
       "lng": 140.502879,
       "status": "正常",
@@ -226,12 +226,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:02:01.372Z"
+      "updated": "2026-07-10T03:57:49.389Z"
     },
     {
       "id": "mrdemn11ii2ew",
       "type": "消火栓",
-      "name": "松沢字中里",
+      "name": "中里",
       "lat": 37.489578,
       "lng": 140.487977,
       "status": "正常",
@@ -240,12 +240,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:00:59.366Z"
+      "updated": "2026-07-10T03:59:15.708Z"
     },
     {
       "id": "mrdexo9m6tczh",
       "type": "消火栓",
-      "name": "松沢字弥五郎内",
+      "name": "弥五郎内",
       "lat": 37.489664,
       "lng": 140.48376,
       "status": "正常",
@@ -254,12 +254,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-09T12:02:19.953Z"
+      "updated": "2026-07-10T03:59:46.136Z"
     },
     {
       "id": "mrdf08ok7sz8p",
       "type": "消火栓",
-      "name": "松沢字竹重内",
+      "name": "竹重内",
       "lat": 37.491685,
       "lng": 140.485241,
       "status": "正常",
@@ -268,12 +268,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T02:28:40.311Z"
+      "updated": "2026-07-10T03:59:06.133Z"
     },
     {
       "id": "mrdf7to983exr",
       "type": "消火栓",
-      "name": "松沢字糀屋",
+      "name": "糀屋",
       "lat": 37.486135,
       "lng": 140.490804,
       "status": "正常",
@@ -282,12 +282,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:11:16.428Z"
+      "updated": "2026-07-10T04:00:10.877Z"
     },
     {
       "id": "mrdfcdi1g6ph1",
       "type": "消火栓",
-      "name": "松沢字ニツ橋-防火水槽傍",
+      "name": "ニツ橋-防火水槽傍",
       "lat": 37.486041,
       "lng": 140.502949,
       "status": "正常",
@@ -296,12 +296,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:20:59.723Z"
+      "updated": "2026-07-10T03:57:59.432Z"
     },
     {
       "id": "mrdfeuwabxu2l",
       "type": "消火栓",
-      "name": "松沢字ニツ橋",
+      "name": "ニツ橋",
       "lat": 37.487378,
       "lng": 140.50334,
       "status": "正常",
@@ -310,12 +310,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:16:19.636Z"
+      "updated": "2026-07-10T03:57:54.146Z"
     },
     {
       "id": "mrdflklrjhhdb",
       "type": "消火栓",
-      "name": "松沢字奥入",
+      "name": "奥入",
       "lat": 37.49292,
       "lng": 140.481255,
       "status": "正常",
@@ -324,12 +324,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T02:40:11.787Z"
+      "updated": "2026-07-10T03:58:04.209Z"
     },
     {
       "id": "mrdfskzgnu6u3",
       "type": "消火栓",
-      "name": "松沢字古城ケ谷戸",
+      "name": "古城ケ谷戸",
       "lat": 37.489936,
       "lng": 140.481555,
       "status": "正常",
@@ -338,12 +338,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:05:15.823Z"
+      "updated": "2026-07-10T03:58:25.990Z"
     },
     {
       "id": "mrdg047zg3vcm",
       "type": "消火栓",
-      "name": "松沢字大作田",
+      "name": "大作田",
       "lat": 37.48081,
       "lng": 140.47566,
       "status": "正常",
@@ -352,12 +352,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T02:45:29.030Z"
+      "updated": "2026-07-10T03:59:00.607Z"
     },
     {
       "id": "mrdg549d16hjx",
       "type": "消火栓",
-      "name": "松沢字下堺",
+      "name": "下堺",
       "lat": 37.483819,
       "lng": 140.46536,
       "status": "正常",
@@ -366,12 +366,12 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T02:47:07.706Z"
+      "updated": "2026-07-10T03:58:14.273Z"
     },
     {
       "id": "mrdg6rarmua1l",
       "type": "消火栓",
-      "name": "松沢字堺山",
+      "name": "堺山",
       "lat": 37.483726,
       "lng": 140.462093,
       "status": "正常",
@@ -380,7 +380,7 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T02:56:42.253Z"
+      "updated": "2026-07-10T03:58:38.640Z"
     },
     {
       "id": "mrdgtd5hppzu5",
