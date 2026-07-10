@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-10T04:00:48.647Z",
+  "exportedAt": "2026-07-10T05:04:36.671Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -20,15 +20,15 @@
       "id": "mra2os7v03080",
       "type": "消火栓",
       "name": "弥五郎内-松沢運動場傍",
-      "lat": 37.486899,
-      "lng": 140.483025,
+      "lat": 37.486832924290155,
+      "lng": 140.48298777485053,
       "status": "正常",
       "notes": "3区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:59:51.448Z"
+      "updated": "2026-07-10T04:50:34.597Z"
     },
     {
       "id": "mra2t5zmyz51m",
@@ -465,6 +465,54 @@
       "cover": null,
       "hose": null,
       "updated": "2026-07-09T12:52:02.178Z"
+    },
+    {
+      "id": "mregojquyfnj8",
+      "type": "防火水槽",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.488074,
+      "lng": 140.472577,
+      "status": "未確認",
+      "notes": "溜め池",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-10T04:55:45.207Z"
+    },
+    {
+      "id": "mregqxaq7l887",
+      "type": "防火水槽",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.48792,
+      "lng": 140.463556,
+      "status": "未確認",
+      "notes": "溜め池",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-10T04:57:29.790Z"
+    },
+    {
+      "id": "mregw7ck7urar",
+      "type": "消火栓",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.488353,
+      "lng": 140.467876,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-10T05:00:49.650Z"
     }
   ],
   "plans": [
