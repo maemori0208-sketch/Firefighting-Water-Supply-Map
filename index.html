@@ -341,7 +341,12 @@
   .pdf-close{flex:none; width:42px; height:42px; border:none; border-radius:9px; background:rgba(255,255,255,.16);
     color:#fff; font-size:26px; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent}
   .pdf-close:hover{background:rgba(255,255,255,.28)} .pdf-close:active{background:rgba(255,255,255,.42)}
-  .pdf-overlay iframe{flex:1; width:100%; border:none; background:#fff}
+  .pdf-stage{flex:1; position:relative; min-height:0; background:#fff}
+  .pdf-overlay iframe{position:absolute; inset:0; width:100%; height:100%; border:none; background:#fff}
+  /* 「生成中」はiframeの上に重ねるHTMLレイヤーで表示（srcdocの二重差し替えによる初回未表示を防ぐ） */
+  .pdf-loading{position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    text-align:center; padding:24px; color:#334; font-size:15px; line-height:1.7; background:#fff}
+  .pdf-loading.show{display:flex}
 
   .file-hidden{display:none}
   /* ポップアップ（訓練メモ等）をツールバー・送水カードより前面へ＝常にタップ可能に */
@@ -940,7 +945,10 @@
     <span class="pdf-hint">「印刷」→ 保存先に「PDF」を選ぶと保存できます</span>
     <button id="pdfClose" class="pdf-close" title="閉じる">×</button>
   </div>
-  <iframe id="pdfFrame" title="訓練計画書"></iframe>
+  <div class="pdf-stage">
+    <iframe id="pdfFrame" title="訓練計画書"></iframe>
+    <div id="pdfLoading" class="pdf-loading">🗺 訓練範囲の地図を生成しています…<br>少しお待ちください。</div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -2391,16 +2399,17 @@ function planToPrintHTML(plan, mapImg, omitBar){
 /* アプリ内オーバーレイ（iframe）で印刷用ドキュメントを表示。
    新規ウィンドウを使わないので、iPhoneのホーム追加運用でも「閉じる」で必ず戻れる */
 async function exportPlanPDF(plan){
-  const ov=$('pdfOverlay'), frame=$('pdfFrame');
-  frame.srcdoc='<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;padding:24px;color:#334;font-size:15px">🗺 訓練範囲の地図を生成しています…少しお待ちください。</body>';
+  const ov=$('pdfOverlay'), frame=$('pdfFrame'), loading=$('pdfLoading');
+  loading.classList.add('show');       // 生成中はiframe上のHTMLレイヤーで表示（srcdocは触らない）
   ov.classList.add('show');
   let mapImg=null;
   try{ mapImg = await renderPlanMapImage(plan.data); }catch(e){ mapImg=null; }
   if(!ov.classList.contains('show')) return;   // 生成中に閉じられたら中断
-  frame.srcdoc = planToPrintHTML(plan, mapImg, true);   // 内蔵バーは省略（オーバーレイ側で操作）
+  frame.srcdoc = planToPrintHTML(plan, mapImg, true);   // srcdocはここで一度だけ設定（内蔵バーは省略）
+  loading.classList.remove('show');
   toast(mapImg ? "PDFを表示しました（印刷→PDF保存）" : "地図は取得できませんでした（地図なしで表示）");
 }
-function closePdfOverlay(){ $('pdfOverlay').classList.remove('show'); $('pdfFrame').srcdoc="about:blank"; }
+function closePdfOverlay(){ $('pdfOverlay').classList.remove('show'); $('pdfLoading').classList.remove('show'); $('pdfFrame').srcdoc="about:blank"; }
 $('pdfClose').onclick=closePdfOverlay;
 $('pdfPrint').onclick=()=>{
   const f=$('pdfFrame');
