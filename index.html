@@ -80,6 +80,7 @@
   .stat .n{font-size:20px; font-weight:800; line-height:1}
   .stat .l{font-size:11px; color:var(--muted); margin-top:3px}
   .stat.hyd .n{color:var(--hydrant)} .stat.cis .n{color:var(--cistern)}
+  .stats-line{display:none}   /* スマホのみ1行簡易表示（下記メディアクエリで表示） */
 
   .filters{display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px 4px}
   .chip{
@@ -346,10 +347,12 @@
 
     /* サイドバー内：上部をコンパクトにして一覧を広く見せる */
     .district-bar{padding:7px 12px 1px}
-    .stats{padding:5px 12px 1px; gap:6px}
-    .stat{padding:4px 8px}
-    .stat .n{font-size:15px}
-    .stat .l{font-size:9.5px; margin-top:0}
+    .stats{display:none}                    /* カードは隠して1行表示に */
+    .stats-line{display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;
+      padding:5px 12px 2px; font-size:12.5px; color:var(--muted)}
+    .stats-line b{font-weight:800; font-variant-numeric:tabular-nums; margin-left:2px}
+    .stats-line .n-hyd{color:var(--hydrant)} .stats-line .n-cis{color:var(--cistern)} .stats-line .n-bad{color:var(--broken)}
+    .stats-line .sep{color:var(--line)}
     .inspst-bar{padding:2px 12px 0}
     .inspst-bar button{padding:5px; font-size:11px}
     .filters{padding:3px 12px 1px; gap:5px}
@@ -565,6 +568,7 @@
         <div class="stat cis"><div class="n" id="stCis">0</div><div class="l">防火水槽</div></div>
         <div class="stat"><div class="n" id="stBad" style="color:var(--broken)">0</div><div class="l">要点検・破損</div></div>
       </div>
+      <div class="stats-line" id="statsLine"></div>
       <div class="inspst-bar"><button id="inspStatusBtn">🩺 点検状況（地区別・未点検チェック）</button></div>
       <div class="filters" id="typeFilters">
         <span class="chip on" data-f="type" data-v="all">すべて</span>
@@ -1113,9 +1117,17 @@ function passFilter(p){
   return true;
 }
 function renderStats(){
-  document.getElementById('stHyd').textContent = points.filter(p=>p.type==="消火栓").length;
-  document.getElementById('stCis').textContent = points.filter(p=>p.type==="防火水槽").length;
-  document.getElementById('stBad').textContent = points.filter(p=>p.status==="要点検"||p.status==="破損").length;
+  const hyd=points.filter(p=>p.type==="消火栓").length;
+  const cis=points.filter(p=>p.type==="防火水槽").length;
+  const bad=points.filter(p=>p.status==="要点検"||p.status==="破損").length;
+  document.getElementById('stHyd').textContent = hyd;
+  document.getElementById('stCis').textContent = cis;
+  document.getElementById('stBad').textContent = bad;
+  const sl=document.getElementById('statsLine');
+  if(sl) sl.innerHTML =
+      `<span>消火栓<b class="n-hyd">${hyd}</b></span><span class="sep">・</span>`
+    + `<span>防火水槽<b class="n-cis">${cis}</b></span><span class="sep">・</span>`
+    + `<span>要点検/破損<b class="n-bad">${bad}</b></span>`;
 }
 function sortPoints(arr){
   const m=filter.sort||"name-asc";
