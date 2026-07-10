@@ -344,11 +344,19 @@
     #sidebar.open{transform:none}
     #sidebarBackdrop.show{display:block}
 
-    /* サイドバー内：指で押しやすく */
-    .district-bar,.stats,.filters{padding-left:12px; padding-right:12px}
-    .chip{padding:8px 13px; font-size:13px}
-    #search{font-size:16px; padding:10px 12px}   /* 16pxでiOSの自動ズーム防止 */
-    .item{padding:12px 10px}
+    /* サイドバー内：上部をコンパクトにして一覧を広く見せる */
+    .district-bar{padding:7px 12px 1px}
+    .stats{padding:5px 12px 1px; gap:6px}
+    .stat{padding:4px 8px}
+    .stat .n{font-size:15px}
+    .stat .l{font-size:9.5px; margin-top:0}
+    .inspst-bar{padding:2px 12px 0}
+    .inspst-bar button{padding:5px; font-size:11px}
+    .filters{padding:3px 12px 1px; gap:5px}
+    .chip{padding:6px 11px; font-size:12.5px}
+    #search{font-size:16px; margin:4px 12px 1px; padding:8px 12px}   /* 16pxでiOSの自動ズーム防止 */
+    .sortbar{padding:2px 12px 1px}
+    .item{padding:11px 10px}
     .item .t{font-size:14.5px}
     .item .s{font-size:12.5px}
     #districtSel,.sortbar select,.plan-hist-bar select,.inspst-ctrl select{font-size:16px; padding:9px}
