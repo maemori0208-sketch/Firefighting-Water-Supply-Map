@@ -2592,6 +2592,7 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
     try{
       setLink('apple-touch-icon', png(180));       // iOSホーム画面
       const mani={ name:"本宮市 消防水利マップ", short_name:"消防水利", display:"standalone",
+        orientation:"portrait",                        // ホーム画面起動時は縦向きに固定（回転させない）
         background_color:"#eef1f5", theme_color:"#0f2440",
         icons:[{src:png(192),sizes:"192x192",type:"image/png"},
                {src:png(512),sizes:"512x512",type:"image/png"}] };
