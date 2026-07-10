@@ -2629,9 +2629,11 @@ window.addEventListener('orientationchange', ()=>{
   // iOSは回転直後 innerHeight が確定しないため、確定するまで複数回測り直す（1回だけだと古い高さのまま固定される）
   setAppHeight();
   requestAnimationFrame(setAppHeight);
-  [120,300,600].forEach(t=>setTimeout(setAppHeight, t));
-  // 高さ確定後に一度だけ再アンカーして、縦へ戻したときの上ずれ（3mm）を解消する
-  setTimeout(reanchorApp, 400);
+  [120,300,600,1000].forEach(t=>setTimeout(setAppHeight, t));
+  // 回転レイアウトが完全に落ち着いてから再アンカーして、縦へ戻したときの上ずれ（3mm）を解消する。
+  // タイミングはシビアでないため十分に余裕（約1秒）を取る。
+  setTimeout(reanchorApp, 1000);
+  setTimeout(reanchorApp, 1400);
 });
 if(window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
 
