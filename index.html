@@ -351,7 +351,7 @@
     .item{padding:12px 10px}
     .item .t{font-size:14.5px}
     .item .s{font-size:12.5px}
-    #districtSel,.sortbar select,.plan-hist-bar select{font-size:16px; padding:9px}
+    #districtSel,.sortbar select,.plan-hist-bar select,.inspst-ctrl select{font-size:16px; padding:9px}
 
     /* 地図上カード：画面を覆わないよう小さく／畳めるように */
     #layerCard{width:196px; top:8px; right:calc(8px + env(safe-area-inset-right))}
@@ -467,6 +467,25 @@
   #inspSheet, #inspBackdrop{z-index:1360}
   #inspBackdrop{z-index:1350}
 
+  /* ---- 点検状況一覧 ---- */
+  .inspst-bar{padding:2px 14px 0}
+  .inspst-bar button{width:100%; padding:8px; border:1px solid var(--navy); background:#f2f6fc;
+    color:var(--navy); font-size:12px; font-weight:700; border-radius:8px; cursor:pointer; font-family:inherit}
+  .inspst-bar button:hover{background:#e7f0fb}
+  .inspst-ctrl{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+  .inspst-ctrl select{flex:1; min-width:0; padding:7px 8px; font-size:12.5px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; font-family:inherit; color:var(--ink)}
+  .inspst-only{font-size:12px; color:var(--muted); white-space:nowrap; display:flex; align-items:center; gap:4px}
+  .inspst-only input{width:15px; height:15px; accent-color:var(--navy)}
+  .inspst-summary{font-size:12px; color:var(--muted); margin-bottom:8px}
+  .ist-dist{font-size:12px; font-weight:800; color:var(--navy); background:var(--bg);
+    padding:6px 10px; border-radius:7px; margin:10px 0 6px}
+  .ist-row{display:flex; align-items:center; gap:8px; padding:8px 6px; border-bottom:1px solid var(--line); cursor:pointer}
+  .ist-row:hover{background:var(--bg)}
+  .ist-row .ist-name{flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .ist-date{font-size:11.5px; font-weight:700; color:var(--ok); white-space:nowrap}
+  .ist-none{font-size:11px; font-weight:700; color:#fff; background:var(--broken); padding:1px 7px; border-radius:999px; white-space:nowrap}
+
   /* ---- ヘルプ本文 ---- */
   .help-intro{font-size:12.5px; color:var(--muted); line-height:1.6; margin:0 2px 2px}
   .help-sec{margin-top:6px}
@@ -538,6 +557,7 @@
         <div class="stat cis"><div class="n" id="stCis">0</div><div class="l">防火水槽</div></div>
         <div class="stat"><div class="n" id="stBad" style="color:var(--broken)">0</div><div class="l">要点検・破損</div></div>
       </div>
+      <div class="inspst-bar"><button id="inspStatusBtn">🩺 点検状況（地区別・未点検チェック）</button></div>
       <div class="filters" id="typeFilters">
         <span class="chip on" data-f="type" data-v="all">すべて</span>
         <span class="chip" data-f="type" data-v="消火栓">消火栓</span>
@@ -752,6 +772,24 @@
           <span class="ds-ic">🗑️</span>
           <span class="ds-tx"><b>全データを削除</b><small>この端末の全地点を消去します。元に戻せません。</small></span>
         </button>
+      </div>
+    </div>
+
+    <!-- 点検状況一覧（地区別） -->
+    <div class="backdrop" id="inspStBackdrop"></div>
+    <div id="inspStSheet" class="sheet">
+      <div class="ds-hd"><h2>🩺 点検状況（地区別）</h2><button id="inspStClose" title="閉じる">×</button></div>
+      <div class="ds-bd">
+        <div class="inspst-ctrl">
+          <select id="inspStSort" title="並び替え">
+            <option value="date-old">点検日 古い順（未点検を上に）</option>
+            <option value="date-new">点検日 新しい順</option>
+            <option value="name">名前順</option>
+          </select>
+          <label class="inspst-only"><input type="checkbox" id="inspStOnly"> 未点検のみ</label>
+        </div>
+        <div id="inspStSummary" class="inspst-summary"></div>
+        <div id="inspStList"></div>
       </div>
     </div>
 
@@ -1460,6 +1498,57 @@ function mergePoints(a,b){
   applyLatestStatus(base);
   return base;
 }
+
+/* ============ 点検状況一覧（地区別） ============ */
+let inspStSort="date-old";
+function openInspStatus(){ renderInspStatus(); $('inspStSheet').classList.add('open'); $('inspStBackdrop').classList.add('show'); closeSidebarMobile(); }
+function closeInspStatus(){ $('inspStSheet').classList.remove('open'); $('inspStBackdrop').classList.remove('show'); }
+function renderInspStatus(){
+  const onlyNone=$('inspStOnly').checked;
+  const box=$('inspStList'); box.innerHTML="";
+  // サイドバーで選択中の地区に連動（「すべての地区」なら全件）
+  const scope=points.filter(p=> filter.district==="all" || (p.district||"")===filter.district);
+  const done=scope.filter(p=>p.lastInspected).length;
+  $('inspStSummary').textContent=(filter.district!=="all"?`地区「${filter.district}」　`:"")
+    +`全 ${scope.length} 件：点検済 ${done} ・ 未点検 ${scope.length-done}`;
+  const groups={};
+  scope.forEach(p=>{ const d=(p.district||"").trim()||"（地区未設定）"; (groups[d]=groups[d]||[]).push(p); });
+  const cmp=(a,b)=>{
+    const da=a.lastInspected||"", db=b.lastInspected||"";
+    if(inspStSort==="name") return (a.name||"").localeCompare(b.name||"","ja");
+    if(inspStSort==="date-new"){
+      if(!da&&!db) return (a.name||"").localeCompare(b.name||"","ja");
+      if(!da) return 1; if(!db) return -1; return db.localeCompare(da);
+    }
+    if(!da&&!db) return (a.name||"").localeCompare(b.name||"","ja");   // date-old：未点検を上に→古い順
+    if(!da) return -1; if(!db) return 1; return da.localeCompare(db);
+  };
+  Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ja")).forEach(d=>{
+    let list=groups[d].slice();
+    if(onlyNone) list=list.filter(p=>!p.lastInspected);
+    if(!list.length) return;
+    list.sort(cmp);
+    const doneN=groups[d].filter(p=>p.lastInspected).length;
+    const h=document.createElement('div'); h.className="ist-dist";
+    h.textContent=`【${d}】 点検済 ${doneN} ・ 未点検 ${groups[d].length-doneN}`;
+    box.appendChild(h);
+    list.forEach(p=>{
+      const row=document.createElement('div'); row.className="ist-row";
+      row.innerHTML=`<span class="badge ${p.type==="消火栓"?"hyd":"cis"}">${p.type==="消火栓"?"消火栓":"水槽"}</span>`
+        +`<span class="ist-name">${escapeHtml(p.name||"(無名)")}</span>`
+        +(p.lastInspected?`<span class="ist-date">✓ ${fmtDay(p.lastInspected)}</span>`:`<span class="ist-none">未点検</span>`)
+        +`<span class="st-pill" style="background:${STATUS_COLOR[p.status]||STATUS_COLOR['未確認']}">${p.status}</span>`;
+      row.onclick=()=>{ closeInspStatus(); map.setView([p.lat,p.lng], Math.max(map.getZoom(),16)); openEditor(p.id); };
+      box.appendChild(row);
+    });
+  });
+  if(!box.children.length) box.innerHTML=`<div class="plan-empty">該当する地点がありません。</div>`;
+}
+$('inspStatusBtn').onclick=openInspStatus;
+$('inspStClose').onclick=closeInspStatus;
+$('inspStBackdrop').onclick=closeInspStatus;
+$('inspStSort').onchange=e=>{ inspStSort=e.target.value; renderInspStatus(); };
+$('inspStOnly').onchange=renderInspStatus;
 function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso);
   return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0'); }
 
