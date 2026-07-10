@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-10T05:04:36.671Z",
+  "exportedAt": "2026-07-10T12:50:45.255Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -513,6 +513,22 @@
       "inspections": [],
       "lastInspected": null,
       "updated": "2026-07-10T05:00:49.650Z"
+    },
+    {
+      "id": "mrewzxyonlypt",
+      "type": "防火水槽",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.48908,
+      "lng": 140.469094,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-10T12:31:33.624Z"
     }
   ],
   "plans": [
