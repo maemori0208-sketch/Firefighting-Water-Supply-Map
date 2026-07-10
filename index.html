@@ -2605,11 +2605,18 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 function setAppHeight(){
   // innerHeight はツールバー開閉に追従しつつ、キーボード表示では縮まない（編集時の崩れ防止）
   document.documentElement.style.setProperty('--app-h', Math.round(window.innerHeight) + 'px');
+  // standalone(ホーム画面)で回転後に残る、ドキュメント全体の数px分のズレ（下の空白・ヘッダーのはみ出し）を戻す
+  if(window.scrollY||window.scrollX) window.scrollTo(0,0);
   if(typeof map !== 'undefined') map.invalidateSize();
 }
 setAppHeight();
 window.addEventListener('resize', setAppHeight);
-window.addEventListener('orientationchange', ()=>{ setAppHeight(); setTimeout(setAppHeight, 250); });
+window.addEventListener('orientationchange', ()=>{
+  // iOSは回転直後 innerHeight が確定しないため、確定するまで複数回測り直す（1回だけだと古い高さのまま固定される）
+  setAppHeight();
+  requestAnimationFrame(setAppHeight);
+  [120,300,600].forEach(t=>setTimeout(setAppHeight, t));
+});
 if(window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
 
 /* ============ 起動 ============ */
