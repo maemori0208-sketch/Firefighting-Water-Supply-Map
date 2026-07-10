@@ -2652,10 +2652,10 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize', setAp
   };
   const classify=(t)=>{
     for(let el=t; el && el.nodeType===1 && el!==document.body; el=el.parentElement){
-      const tag=el.tagName;
-      if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||el.isContentEditable) return 'free'; // 文字選択・入力を妨げない
-      if(el.classList && el.classList.contains('leaflet-container')) return 'free';             // 地図はLeafletに任せる
-      if(isScrollableY(el)) return el;                                                          // 実際に縦スクロールできる要素
+      if(el.classList && el.classList.contains('leaflet-container')) return 'free';   // 地図はLeafletに任せる
+      if(isScrollableY(el)) return el;                                                // 実際に縦スクロールできる要素(メモtextarea・一覧など)
+      // 検索ボックスや並び替え等の入力欄も、非スクロール域なら 'block' に流してページのバウンスを止める
+      // （タップ/入力/ネイティブピッカーは touchmove を止めても支障なし）
     }
     return 'block';
   };
