@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-13T05:43:44.966Z",
+  "exportedAt": "2026-07-13T07:56:43.818Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -544,7 +544,39 @@
       "hose": null,
       "inspections": [],
       "lastInspected": null,
-      "updated": "2026-07-13T05:43:21.403Z"
+      "updated": "2026-07-13T06:13:44.663Z"
+    },
+    {
+      "id": "mriw9uzvd018s",
+      "type": "防火水槽",
+      "name": "西田町丹伊田字堺",
+      "lat": 37.482014,
+      "lng": 140.470023,
+      "status": "未確認",
+      "notes": "",
+      "district": "西田町丹伊田",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-13T07:23:16.106Z"
+    },
+    {
+      "id": "mrix7g8bf62fk",
+      "type": "防火水槽",
+      "name": "白岩字宮田",
+      "lat": 37.48654,
+      "lng": 140.459571,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-13T07:48:24.953Z"
     }
   ],
   "plans": [
