@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-10T12:50:45.255Z",
+  "exportedAt": "2026-07-13T05:43:44.966Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -529,6 +529,22 @@
       "inspections": [],
       "lastInspected": null,
       "updated": "2026-07-10T12:31:33.624Z"
+    },
+    {
+      "id": "mrispydhiywq8",
+      "type": "消火栓",
+      "name": "白岩字塩ノ崎",
+      "lat": 37.48845,
+      "lng": 140.46344,
+      "status": "未確認",
+      "notes": "",
+      "district": "白岩",
+      "photos": [],
+      "cover": null,
+      "hose": null,
+      "inspections": [],
+      "lastInspected": null,
+      "updated": "2026-07-13T05:43:21.403Z"
     }
   ],
   "plans": [
