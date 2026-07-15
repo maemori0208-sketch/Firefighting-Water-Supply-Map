@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-13T07:56:43.818Z",
+  "exportedAt": "2026-07-15T12:57:50.982Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -628,8 +628,26 @@
           {
             "lat": 37.49473282910322,
             "lng": 140.48256665468216,
-            "memo": "渡辺常男様宅",
+            "memo": "渡辺常夫様宅",
             "memoPos": "top",
+            "memoVertical": false,
+            "fontSize": 11,
+            "bold": false
+          },
+          {
+            "lat": 37.49283454907627,
+            "lng": 140.48293411731723,
+            "memo": "松沢2区集会所",
+            "memoPos": "bottom",
+            "memoVertical": false,
+            "fontSize": 11,
+            "bold": false
+          },
+          {
+            "lat": 37.49288136822226,
+            "lng": 140.48383533954623,
+            "memo": "荒川藤典様宅(旧三松屋商店)",
+            "memoPos": "bottom",
             "memoVertical": false,
             "fontSize": 11,
             "bold": false
@@ -641,12 +659,12 @@
           "legMax": 200
         },
         "view": {
-          "lat": 37.49403352362734,
-          "lng": 140.48374049890717,
+          "lat": 37.493966712926,
+          "lng": 140.4841893911362,
           "z": 18
         }
       },
-      "updatedAt": "2026-07-07T06:20:56.826Z"
+      "updatedAt": "2026-07-15T12:55:58.827Z"
     },
     {
       "id": "mrajiymzickvd",
