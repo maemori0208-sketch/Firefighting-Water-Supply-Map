@@ -266,8 +266,8 @@
   .memo-lbl{position:absolute; top:0; left:0; background:rgba(255,255,255,.96);
     border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.25);
     font-size:11px; font-weight:600; color:var(--ink); pointer-events:none;}
-  .memo-lbl.h{writing-mode:horizontal-tb; white-space:nowrap; width:max-content; padding:3px 7px; line-height:1.35}
-  .memo-lbl.v{writing-mode:vertical-rl; text-orientation:upright; white-space:nowrap;
+  .memo-lbl.h{writing-mode:horizontal-tb; white-space:pre; width:max-content; padding:3px 7px; line-height:1.35}
+  .memo-lbl.v{writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
     letter-spacing:1px; padding:6px 4px; line-height:1.4}
   .memo-lbl[data-dir="bottom"]{transform:translate(-50%, 20px)}
   .memo-lbl[data-dir="top"]{transform:translate(-50%, calc(-100% - 20px))}
@@ -2278,7 +2278,7 @@ function renderPlanMapImage(d, opt){
       ctx.fillStyle='#fff'; ctx.font=`bold ${Math.round(r*1.1)}px system-ui,sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,x,y);
     };
-    (d.notes||[]).forEach(n=>pin(n,'#e8951b','メ',10));
+    (d.notes||[]).forEach((n,i)=>pin(n,'#e8951b',String(i+1),11));  // メモは通し番号（下部のメモ一覧と対応）
     let pn=0;
     relays.forEach(rl=>{
       if(rl.via){ const [x,y]=toXY(rl);      // 屈曲点は小さな濃紺の点
@@ -2325,7 +2325,7 @@ function planToPrintHTML(plan, mapImg, omitBar){
     rows+=`<tr><td>区間${i+1}</td><td>${sg.d} m</td><td>${sg.hose} 本</td><td>${sg.over?"⚠ 目安超":"—"}</td></tr>`;
   });
   // メモ一覧
-  const memos=(d.notes||[]).filter(n=>n&&n.memo).map(n=>`<li>${esc(n.memo)}</li>`).join("");
+  const memos=(d.notes||[]).map((n,i)=> (n&&n.memo)?`<li><span class="mno">${i+1}</span><span>${esc(n.memo)}</span></li>`:null).filter(Boolean).join("");
   const summary = seg
     ? `合計ホース <b>${seg.hose}本</b>　／　可搬ポンプ <b>${seg.pumps}台</b>（水元1＋中継${seg.pumpNodes.length}）${seg.vias?`　／　屈曲点 ${seg.vias}`:""}　／　総延長 約 <b>${seg.total}m</b>`
     : `（送水計算なし）`;
@@ -2369,8 +2369,11 @@ function planToPrintHTML(plan, mapImg, omitBar){
   table.seg td{border:1px solid #dce3ec; padding:3px 6px}
   table.seg td:nth-child(2),table.seg td:nth-child(3){text-align:right; font-variant-numeric:tabular-nums}
   .cond{font-size:10px; color:#5d6b7d; margin-top:5px}
-  ul.memos{margin:6px 0 0; padding-left:18px; font-size:11px}
-  ul.memos li{margin:2px 0}
+  ul.memos{margin:6px 0 0; padding:0; list-style:none; font-size:11px}
+  ul.memos li{display:flex; gap:6px; align-items:baseline; margin:3px 0}
+  ul.memos .mno{flex:none; display:inline-flex; align-items:center; justify-content:center;
+    min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:#e8951b; color:#fff;
+    font-size:9.5px; font-weight:700; line-height:1}
   .foot{margin-top:12px; padding-top:7px; border-top:1px solid #dce3ec; font-size:10px; color:#8a94a6}
   @media print{ .bar{display:none} body{padding:0} .doc{max-width:none} }
   @page{ size:A4; margin:10mm }
@@ -2381,7 +2384,7 @@ function planToPrintHTML(plan, mapImg, omitBar){
     <div class="head"><h1>送水訓練 計画書</h1><span class="sub">本宮市 消防水利マップ</span></div>
     <div class="meta"><div>📅 実施日：<b>${day}</b></div><div>📍 地区：<b>${esc(plan.district||"—")}</b></div><div>🎯 名称：<b>${esc(plan.title||"(無題)")}</b></div></div>
     ${mapImg?`<img class="map" src="${mapImg}" alt="訓練範囲の地図">
-    <div class="legend"><span><i style="background:#0067c0"></i>水元</span><span><i style="background:#1f9d55"></i>中継</span><span><i style="background:#e4002b"></i>火点</span><span><i style="background:#e8951b"></i>メモ</span><span><i style="background:#0f2440;width:7px;height:7px"></i>屈曲</span><span>━ 赤線＝送水ライン</span></div>`:``}
+    <div class="legend"><span><i style="background:#0067c0"></i>水元</span><span><i style="background:#1f9d55"></i>中継</span><span><i style="background:#e4002b"></i>火点</span><span><i style="background:#e8951b"></i>メモ（番号）</span><span><i style="background:#0f2440;width:7px;height:7px"></i>屈曲</span><span>━ 赤線＝送水ライン</span></div>`:``}
     <div class="cols">
       <div class="col">
         <h2>送水系統図</h2>
