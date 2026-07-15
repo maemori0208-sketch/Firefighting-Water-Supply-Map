@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportedAt": "2026-07-15T12:57:50.982Z",
+  "exportedAt": "2026-07-15T13:23:54.719Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -203,7 +203,7 @@
     {
       "id": "mrde8x0rcp6td",
       "type": "消火栓",
-      "name": "下橋ツ辺",
+      "name": "下田",
       "lat": 37.485488,
       "lng": 140.497018,
       "status": "正常",
@@ -212,7 +212,7 @@
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:09.549Z"
+      "updated": "2026-07-15T13:23:31.910Z"
     },
     {
       "id": "mrdeb09a8pym4",
