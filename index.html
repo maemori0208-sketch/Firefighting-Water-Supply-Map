@@ -1713,10 +1713,14 @@ async function reloadSharedData(){
   toast("共有データを読み込みました（"+points.length+"件）");
 }
 function exportJSON(){
-  const payload={version:2, exportedAt:new Date().toISOString(), points, plans:loadPlans()};
+  // 保存済みの計画(plans)に加え、マップ上に配置中の訓練データ(sim)も書き出す。
+  // 配置しただけで「現在の計画を保存」していない訓練データが別端末へ渡らないのを防ぐ。
+  const hasSim = !!(sim.source||sim.fire||(sim.relays&&sim.relays.length)||(sim.notes&&sim.notes.length));
+  const payload={version:3, exportedAt:new Date().toISOString(), points, plans:loadPlans(),
+    sim: hasSim ? currentPlanData() : null};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   downloadBlob(blob, "motomiya_suiri_"+dateStamp()+".json");
-  toast("JSONを書き出しました（地点＋訓練計画）");
+  toast("JSONを書き出しました（地点＋訓練計画"+(hasSim?"＋配置中の訓練":"")+"）");
 }
 document.getElementById('fileImport').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -1724,9 +1728,12 @@ document.getElementById('fileImport').onchange=e=>{
   r.onload=()=>{
     try{
       const raw=JSON.parse(r.result);
-      let inPoints, inPlans=null;
+      let inPoints, inPlans=null, inSim=null;
       if(Array.isArray(raw)){ inPoints=raw; }                 // 旧形式（地点のみ）
-      else if(raw && Array.isArray(raw.points)){ inPoints=raw.points; inPlans=Array.isArray(raw.plans)?raw.plans:null; }
+      else if(raw && Array.isArray(raw.points)){
+        inPoints=raw.points; inPlans=Array.isArray(raw.plans)?raw.plans:null;
+        inSim=(raw.sim && typeof raw.sim==='object')?raw.sim:null;   // 配置中の訓練データ（v3以降）
+      }
       else throw 0;
       if(points.length && !confirm("現在のデータを置き換えます。よろしいですか？（キャンセルで統合）")){
         const ids=new Set(points.map(p=>p.id));
@@ -1736,9 +1743,17 @@ document.getElementById('fileImport').onchange=e=>{
         const cur=loadPlans(); const pid=new Set(cur.map(x=>x.id));
         inPlans.forEach(pl=>{ if(!pid.has(pl.id)) cur.push(pl); });
         storePlans(cur);
+        renderPlanList();   // 計画ライブラリを開いていても一覧を最新にする
+      }
+      let simMsg="";
+      if(inSim){   // 配置中の訓練データ：この端末の配置を上書きする前に確認する
+        const hasCur = !!(sim.source||sim.fire||(sim.relays&&sim.relays.length)||(sim.notes&&sim.notes.length));
+        if(!hasCur || confirm("編集中の訓練配置を、読み込んだ配置に置き換えます。よろしいですか？\n（キャンセルすると現在の配置を残します）")){
+          applySimData(inSim); simMsg="／訓練配置";
+        }
       }
       save(); render();
-      toast("読み込みました（地点"+inPoints.length+"件"+(inPlans?"／計画"+inPlans.length+"件":"")+"）");
+      toast("読み込みました（地点"+inPoints.length+"件"+(inPlans?"／計画"+inPlans.length+"件":"")+simMsg+"）");
     }catch(err){ toast("読み込めませんでした（JSON形式をご確認ください）"); }
   };
   r.readAsText(f); e.target.value="";
@@ -2180,6 +2195,16 @@ function currentPlanData(){
     params:{hoseLen:sim.hoseLen,factor:sim.factor,legMax:sim.legMax},
     view:{lat:map.getCenter().lat,lng:map.getCenter().lng,z:map.getZoom()} };
 }
+/* 計画データ(配置・パラメータ・表示位置)を現在の訓練レイヤーへ反映する（計画を開く／JSON読み込みで共用）*/
+function applySimData(d){
+  if(!d) return;
+  sim.source=d.source||null; sim.fire=d.fire||null; sim.relays=d.relays||[]; sim.notes=d.notes||[];
+  if(d.params){ sim.hoseLen=d.params.hoseLen||20; sim.factor=d.params.factor||1.2; sim.legMax=d.params.legMax||200;
+    $('simHose').value=sim.hoseLen; $('simFactor').value=sim.factor; $('simLeg').value=sim.legMax; }
+  if(!sim.active) simEnter(); else simRender();
+  if(d.view && isFinite(d.view.lat)) map.setView([d.view.lat,d.view.lng], d.view.z||16);
+  savePrefs();
+}
 function planHose(d){
   const R=computePlan(d);
   return R ? {total:R.total, hose:R.hose} : null;
@@ -2472,13 +2497,9 @@ function openPlan(p){
   const d=p.data||{};
   const hasCur = sim.source||sim.fire||(sim.relays&&sim.relays.length)||(sim.notes&&sim.notes.length);
   if(hasCur && !confirm("現在編集中の計画を、選んだ計画に置き換えます。よろしいですか？（保存済みの記録は消えません）")) return;
-  sim.source=d.source||null; sim.fire=d.fire||null; sim.relays=d.relays||[]; sim.notes=d.notes||[];
-  if(d.params){ sim.hoseLen=d.params.hoseLen||20; sim.factor=d.params.factor||1.2; sim.legMax=d.params.legMax||200;
-    $('simHose').value=sim.hoseLen; $('simFactor').value=sim.factor; $('simLeg').value=sim.legMax; }
   closePlanLib();
-  if(!sim.active) simEnter(); else simRender();
-  if(d.view && isFinite(d.view.lat)) map.setView([d.view.lat,d.view.lng], d.view.z||16);
-  savePrefs(); toast(fmtDay(p.date)+" の計画を読み込みました");
+  applySimData(d);
+  toast(fmtDay(p.date)+" の計画を読み込みました");
   $('planDate').value=p.date||new Date().toISOString().slice(0,10);
   $('planTitle').value=p.title||""; $('planDistrict').value=p.district||"";
 }
