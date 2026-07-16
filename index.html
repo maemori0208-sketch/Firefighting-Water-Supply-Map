@@ -2487,9 +2487,13 @@ function renderPlanList(){
 }
 function overwritePlan(p){
   if(!(sim.source||sim.fire||(sim.notes&&sim.notes.length))){ toast("上書きする配置がありません（訓練レイヤーで配置してください）"); return; }
-  if(!confirm("「"+(p.title||"(無題)")+"（"+fmtDay(p.date)+"）」を、現在の配置で上書きします。よろしいですか？")) return;
+  if(!confirm("「"+(p.title||"(無題)")+"（"+fmtDay(p.date)+"）」を、現在の入力内容と配置で上書きします。よろしいですか？")) return;
   const plans=loadPlans(); const t=plans.find(x=>x.id===p.id);
   if(!t){ toast("対象の計画が見つかりません"); return; }
+  // 実施日・地区・名称も入力欄の内容で更新する（配置だけだと地区名等の変更が保存されない）
+  t.date=$('planDate').value||t.date;
+  t.district=$('planDistrict').value.trim();
+  t.title=$('planTitle').value.trim()||"(無題)";
   t.data=currentPlanData(); t.updatedAt=new Date().toISOString();
   storePlans(plans); renderPlanList(); toast("上書き保存しました");
 }
