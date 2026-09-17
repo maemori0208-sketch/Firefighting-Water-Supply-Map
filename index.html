@@ -657,6 +657,7 @@
       <div class="bd">
         <div class="row"><input type="checkbox" id="lyBase2" ><label for="lyBase2">背景を淡色地図に</label></div>
         <div class="row"><input type="checkbox" id="lyPhoto" ><label for="lyPhoto">航空写真</label></div>
+        <div class="row"><input type="checkbox" id="lyVector" ><label for="lyVector">🧩 ベクトル地図（試験・見た目カスタム）</label></div>
         <div class="row" style="padding-bottom:2px"><label>🏔 地形表現</label></div>
         <div class="seg" id="terrainSeg">
           <button data-t="none" class="on" title="地形表現なし">なし</button>
@@ -986,6 +987,57 @@ const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{
 const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
   {maxZoom:18, attribution:"地理院タイル（シームレス空中写真）"});
 gsiStd.addTo(map);
+
+/* ============ ベクトル地図（地理院 最適化ベクトルタイル・MapLibre GL）============ */
+/* オプトイン：初回ON時にMapLibre等を遅延読込。既存のLeaflet部品は上に載る（PDFはラスタ据え置き）*/
+const VECTOR_STYLE_URL="https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json";
+const VECTOR_TILES="https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/{z}/{x}/{y}.pbf";
+let vectorLayer=null;
+function loadScriptOnce(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("読込失敗:"+src)); document.head.appendChild(s); }); }
+async function loadVectorDeps(){
+  if(!document.getElementById('mlcss')){ const c=document.createElement('link'); c.id='mlcss'; c.rel='stylesheet';
+    c.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css'; document.head.appendChild(c); }
+  if(!window.maplibregl) await loadScriptOnce('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js');
+  if(!L.maplibreGL) await loadScriptOnce('https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js');
+}
+/* ▼▼ ベクトル地図の見た目カスタム：std.json のレイヤーidを参照して自由に調整できます ▼▼
+   例）等高線を濃く／水域の色／注記の大きさ など。l.paint（色・太さ）や l.layout（文字サイズ）を変更。*/
+function customizeVectorStyle(style){
+  (style.layers||[]).forEach(l=>{
+    if(!l.id) return;
+    // ※ paintのプロパティはレイヤー種別に一致させること（不一致だとスタイル全体が読み込めません）
+    if(l.type==='line' && l.id.indexOf('等高線')>=0){ l.paint=l.paint||{}; l.paint['line-color']='#a86a34'; } // 等高線を濃く（読みやすく）
+    if(l.type==='symbol' && l.id.indexOf('注記')>=0 && l.layout && typeof l.layout['text-size']==='number') l.layout['text-size']=l.layout['text-size']+1; // 地名をやや大きく
+  });
+  return style;
+}
+/* ▲▲ ここまでがカスタム部分 ▲▲ */
+async function ensureVectorLayer(){
+  if(vectorLayer) return vectorLayer;
+  await loadVectorDeps();
+  const style=await (await fetch(VECTOR_STYLE_URL,{cache:'force-cache'})).json();
+  style.sources.v={ type:"vector", tiles:[VECTOR_TILES], minzoom:4, maxzoom:16,
+    attribution:"地理院タイル（最適化ベクトルタイル）" };   // PMTiles→XYZ pbf に差し替え（追加ライブラリ不要）
+  customizeVectorStyle(style);
+  vectorLayer=L.maplibreGL({ style, attribution:"地理院タイル（最適化ベクトルタイル）" });
+  return vectorLayer;
+}
+/* 背景の優先順位：航空写真 ＞ ベクトル ＞ 淡色 ＞ 標準 */
+function baseMode(){
+  if($('lyPhoto').checked) return 'photo';
+  if($('lyVector') && $('lyVector').checked && vectorLayer) return 'vector';
+  if($('lyBase2').checked) return 'pale';
+  return 'std';
+}
+function setBaseLayer(){
+  const m=baseMode();
+  [gsiStd,gsiPale,gsiPhoto].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
+  if(vectorLayer && map.hasLayer(vectorLayer) && m!=='vector') map.removeLayer(vectorLayer);
+  if(m==='photo') gsiPhoto.addTo(map);
+  else if(m==='vector'){ vectorLayer.addTo(map); const c=vectorLayer.getContainer&&vectorLayer.getContainer(); if(c) c.style.zIndex=200; }
+  else if(m==='pale') gsiPale.addTo(map);
+  else gsiStd.addTo(map);
+}
 // 陰影起伏図（地形を立体表示）：背景タイルの上・マーカーの下に半透明で重ねる専用ペイン
 map.createPane('shadePane');
 map.getPane('shadePane').style.zIndex=250;                 // tilePane(200) < これ < overlayPane(400)
@@ -1230,16 +1282,15 @@ document.getElementById('search').oninput=e=>{ filter.q=e.target.value.trim(); r
 $('listSort').onchange=e=>{ filter.sort=e.target.value; render(); savePrefs(); };
 
 /* ============ レイヤー切替 ============ */
-document.getElementById('lyBase2').onchange=e=>{
-  if(e.target.checked){ map.removeLayer(gsiStd); if(!document.getElementById('lyPhoto').checked) gsiPale.addTo(map); }
-  else{ map.removeLayer(gsiPale); if(!document.getElementById('lyPhoto').checked) gsiStd.addTo(map); }
-  savePrefs();
-};
-document.getElementById('lyPhoto').onchange=e=>{
-  if(e.target.checked){ map.removeLayer(gsiStd); map.removeLayer(gsiPale); gsiPhoto.addTo(map); }
-  else{ map.removeLayer(gsiPhoto);
-    (document.getElementById('lyBase2').checked?gsiPale:gsiStd).addTo(map); }
-  savePrefs();
+document.getElementById('lyBase2').onchange=()=>{ setBaseLayer(); savePrefs(); };
+document.getElementById('lyPhoto').onchange=()=>{ setBaseLayer(); savePrefs(); };
+document.getElementById('lyVector').onchange=async e=>{
+  if(e.target.checked){
+    toast("ベクトル地図を読み込み中…");
+    try{ await ensureVectorLayer(); }
+    catch(err){ toast("ベクトル地図の読み込みに失敗しました（通信をご確認ください）"); e.target.checked=false; return; }
+  }
+  setBaseLayer(); savePrefs();
 };
 document.querySelectorAll('#terrainSeg button').forEach(b=>{
   b.onclick=()=>{ setTerrain(b.dataset.t); savePrefs(); };
@@ -2540,7 +2591,7 @@ function savePrefs(){
       district:filter.district, type:filter.type, status:filter.status, q:filter.q,
       sort:filter.sort, planSort:planSortMode,
       cover:globalCover, hose:$('hoseR').value,
-      layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, terrain:terrainMode, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
+      layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, vector:$('lyVector').checked, terrain:terrainMode, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
       simParams:{hose:sim.hoseLen, factor:sim.factor, legMax:sim.legMax},
       simPlan:{source:sim.source, fire:sim.fire, relays:sim.relays, notes:sim.notes},
       view:{lat:c.lat, lng:c.lng, z:map.getZoom()}
@@ -2577,6 +2628,7 @@ function applyPrefs(p){
   if(p.layers){
     $('lyBase2').checked=!!p.layers.pale; $('lyBase2').dispatchEvent(new Event('change'));
     $('lyPhoto').checked=!!p.layers.photo; $('lyPhoto').dispatchEvent(new Event('change'));
+    if(p.layers.vector){ $('lyVector').checked=true; $('lyVector').dispatchEvent(new Event('change')); }  // 非同期で読込
     setTerrain(p.layers.terrain || (p.layers.shade?"shade":"none"));  // shadeは旧prefsとの互換
     $('lyCover').checked=p.layers.cover!==false; $('lyCover').dispatchEvent(new Event('change'));
     $('lyHose').checked=!!p.layers.hose; $('lyHose').dispatchEvent(new Event('change'));
