@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "exportedAt": "2026-07-15T13:23:54.719Z",
+  "version": 3,
+  "exportedAt": "2026-09-17T07:31:39.486Z",
   "points": [
     {
       "id": "mr9zb9seh7yn9",
@@ -20,15 +20,15 @@
       "id": "mra2os7v03080",
       "type": "消火栓",
       "name": "弥五郎内-松沢運動場傍",
-      "lat": 37.486832924290155,
-      "lng": 140.48298777485053,
+      "lat": 37.48687551490444,
+      "lng": 140.48299849605627,
       "status": "正常",
       "notes": "3区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T04:50:34.597Z"
+      "updated": "2026-09-17T07:31:12.741Z"
     },
     {
       "id": "mra2t5zmyz51m",
@@ -120,29 +120,29 @@
       "id": "mraicz9ewyd94",
       "type": "消火栓",
       "name": "柳作",
-      "lat": 37.487761,
-      "lng": 140.479801,
+      "lat": 37.487848165779035,
+      "lng": 140.47982006597442,
       "status": "正常",
       "notes": "2区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T04:00:00.319Z"
+      "updated": "2026-09-17T07:30:24.509Z"
     },
     {
       "id": "mrbgbghgvupyd",
       "type": "消火栓",
       "name": "糀屋",
-      "lat": 37.486571,
-      "lng": 140.488808,
+      "lat": 37.48663287403121,
+      "lng": 140.48879875826734,
       "status": "正常",
       "notes": "1区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T04:00:05.386Z"
+      "updated": "2026-09-17T07:28:02.456Z"
     },
     {
       "id": "mrbglpaxtdetz",
@@ -176,43 +176,43 @@
       "id": "mrcusfhx1czgv",
       "type": "消火栓",
       "name": "上橋ツ辺",
-      "lat": 37.484747,
-      "lng": 140.495189,
+      "lat": 37.48470458626262,
+      "lng": 140.49515427398828,
       "status": "正常",
       "notes": "1区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:49.390Z"
+      "updated": "2026-09-17T07:29:59.961Z"
     },
     {
       "id": "mrcuuqerb7cai",
       "type": "消火栓",
       "name": "上橋ツ辺-荒川商店前",
-      "lat": 37.483994,
-      "lng": 140.49668,
+      "lat": 37.4840182003268,
+      "lng": 140.49664424157294,
       "status": "正常",
       "notes": "1区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:55.471Z"
+      "updated": "2026-09-17T07:29:56.160Z"
     },
     {
       "id": "mrde8x0rcp6td",
       "type": "消火栓",
       "name": "下田",
-      "lat": 37.485488,
-      "lng": 140.497018,
+      "lat": 37.48548890031985,
+      "lng": 140.4969392998252,
       "status": "正常",
       "notes": "1区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-15T13:23:31.910Z"
+      "updated": "2026-09-17T07:29:52.832Z"
     },
     {
       "id": "mrdeb09a8pym4",
@@ -232,57 +232,57 @@
       "id": "mrdemn11ii2ew",
       "type": "消火栓",
       "name": "中里",
-      "lat": 37.489578,
-      "lng": 140.487977,
+      "lat": 37.48954116400685,
+      "lng": 140.4879552202234,
       "status": "正常",
       "notes": "2区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:59:15.708Z"
+      "updated": "2026-09-17T07:30:11.872Z"
     },
     {
       "id": "mrdexo9m6tczh",
       "type": "消火栓",
       "name": "弥五郎内",
-      "lat": 37.489664,
-      "lng": 140.48376,
+      "lat": 37.4896869646448,
+      "lng": 140.48367175627126,
       "status": "正常",
       "notes": "3区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:59:46.136Z"
+      "updated": "2026-09-17T07:29:17.621Z"
     },
     {
       "id": "mrdf08ok7sz8p",
       "type": "消火栓",
       "name": "竹重内",
-      "lat": 37.491685,
-      "lng": 140.485241,
+      "lat": 37.49159912799801,
+      "lng": 140.48514161062653,
       "status": "正常",
       "notes": "2区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:59:06.133Z"
+      "updated": "2026-09-17T07:28:55.624Z"
     },
     {
       "id": "mrdf7to983exr",
       "type": "消火栓",
       "name": "糀屋",
-      "lat": 37.486135,
-      "lng": 140.490804,
+      "lat": 37.48605182466991,
+      "lng": 140.49089219998947,
       "status": "正常",
       "notes": "1区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T04:00:10.877Z"
+      "updated": "2026-09-17T07:27:54.518Z"
     },
     {
       "id": "mrdfcdi1g6ph1",
@@ -302,43 +302,43 @@
       "id": "mrdfeuwabxu2l",
       "type": "消火栓",
       "name": "ニツ橋",
-      "lat": 37.487378,
-      "lng": 140.50334,
+      "lat": 37.487388433788105,
+      "lng": 140.50330550718454,
       "status": "正常",
       "notes": "1区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:57:54.146Z"
+      "updated": "2026-09-17T07:29:46.975Z"
     },
     {
       "id": "mrdflklrjhhdb",
       "type": "消火栓",
       "name": "奥入",
-      "lat": 37.49292,
-      "lng": 140.481255,
+      "lat": 37.492887211634056,
+      "lng": 140.4812382966287,
       "status": "正常",
       "notes": "2区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:04.209Z"
+      "updated": "2026-09-17T07:29:23.713Z"
     },
     {
       "id": "mrdfskzgnu6u3",
       "type": "消火栓",
       "name": "古城ケ谷戸",
-      "lat": 37.489936,
-      "lng": 140.481555,
+      "lat": 37.48995086279661,
+      "lng": 140.4815299899589,
       "status": "正常",
       "notes": "2区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:25.990Z"
+      "updated": "2026-09-17T07:29:11.660Z"
     },
     {
       "id": "mrdg047zg3vcm",
@@ -358,29 +358,29 @@
       "id": "mrdg549d16hjx",
       "type": "消火栓",
       "name": "下堺",
-      "lat": 37.483819,
-      "lng": 140.46536,
+      "lat": 37.48387879989385,
+      "lng": 140.46532810878892,
       "status": "正常",
       "notes": "3区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:14.273Z"
+      "updated": "2026-09-17T07:30:43.721Z"
     },
     {
       "id": "mrdg6rarmua1l",
       "type": "消火栓",
       "name": "堺山",
-      "lat": 37.483726,
-      "lng": 140.462093,
+      "lat": 37.483717022867935,
+      "lng": 140.46206117820878,
       "status": "正常",
       "notes": "3区",
       "district": "松沢",
       "photos": [],
       "cover": null,
       "hose": null,
-      "updated": "2026-07-10T03:58:38.640Z"
+      "updated": "2026-09-17T07:30:45.835Z"
     },
     {
       "id": "mrdgtd5hppzu5",
@@ -502,8 +502,8 @@
       "id": "mregw7ck7urar",
       "type": "消火栓",
       "name": "白岩字塩ノ崎",
-      "lat": 37.488353,
-      "lng": 140.467876,
+      "lat": 37.48840789414096,
+      "lng": 140.46786010837624,
       "status": "未確認",
       "notes": "",
       "district": "白岩",
@@ -512,7 +512,7 @@
       "hose": null,
       "inspections": [],
       "lastInspected": null,
-      "updated": "2026-07-10T05:00:49.650Z"
+      "updated": "2026-09-17T07:29:38.822Z"
     },
     {
       "id": "mrewzxyonlypt",
@@ -628,26 +628,8 @@
           {
             "lat": 37.49473282910322,
             "lng": 140.48256665468216,
-            "memo": "渡辺常夫様宅",
+            "memo": "渡辺常男様宅",
             "memoPos": "top",
-            "memoVertical": false,
-            "fontSize": 11,
-            "bold": false
-          },
-          {
-            "lat": 37.49283454907627,
-            "lng": 140.48293411731723,
-            "memo": "松沢2区集会所",
-            "memoPos": "bottom",
-            "memoVertical": false,
-            "fontSize": 11,
-            "bold": false
-          },
-          {
-            "lat": 37.49288136822226,
-            "lng": 140.48383533954623,
-            "memo": "荒川藤典様宅(旧三松屋商店)",
-            "memoPos": "bottom",
             "memoVertical": false,
             "fontSize": 11,
             "bold": false
@@ -659,12 +641,12 @@
           "legMax": 200
         },
         "view": {
-          "lat": 37.493966712926,
-          "lng": 140.4841893911362,
+          "lat": 37.49403352362734,
+          "lng": 140.48374049890717,
           "z": 18
         }
       },
-      "updatedAt": "2026-07-15T12:55:58.827Z"
+      "updatedAt": "2026-07-07T06:20:56.826Z"
     },
     {
       "id": "mrajiymzickvd",
@@ -744,6 +726,170 @@
           "z": 17
         }
       }
+    },
+    {
+      "id": "mrnixgaakz1mm",
+      "date": "2026-08-23",
+      "district": "古城ヶ谷戸・奥入",
+      "title": "白沢第三・第六合同送水訓練",
+      "createdAt": "2026-07-16T13:07:29.074Z",
+      "data": {
+        "source": {
+          "lat": 37.49306864451277,
+          "lng": 140.48438251018527,
+          "memo": "白沢第三分団 ポンプ車",
+          "memoPos": "right"
+        },
+        "fire": {
+          "lat": 37.49433700339292,
+          "lng": 140.4821589589119,
+          "memo": ""
+        },
+        "relays": [
+          {
+            "lat": 37.49385605105084,
+            "lng": 140.4841974377632,
+            "memo": "第一機関",
+            "memoPos": "right"
+          },
+          {
+            "lat": 37.49458599077802,
+            "lng": 140.48392653465274,
+            "memo": "第二機関",
+            "memoPos": "right"
+          },
+          {
+            "lat": 37.49477113470577,
+            "lng": 140.48302799463275,
+            "memo": "第三機関",
+            "memoPos": "right"
+          },
+          {
+            "lat": 37.494542149381246,
+            "lng": 140.48285307305264,
+            "memo": "",
+            "via": true
+          }
+        ],
+        "notes": [
+          {
+            "lat": 37.49473282910322,
+            "lng": 140.48256665468216,
+            "memo": "渡辺常夫様宅",
+            "memoPos": "top",
+            "memoVertical": false,
+            "fontSize": 11,
+            "bold": false
+          },
+          {
+            "lat": 37.49283454907627,
+            "lng": 140.48293411731723,
+            "memo": "松沢2区集会所",
+            "memoPos": "bottom",
+            "memoVertical": false,
+            "fontSize": 11,
+            "bold": false
+          },
+          {
+            "lat": 37.49288136822226,
+            "lng": 140.48383533954623,
+            "memo": "荒川藤典様宅\n(旧三松屋商店)",
+            "memoPos": "bottom",
+            "memoVertical": false,
+            "fontSize": 11,
+            "bold": false
+          }
+        ],
+        "params": {
+          "hoseLen": 20,
+          "factor": 1.1,
+          "legMax": 200
+        },
+        "view": {
+          "lat": 37.49368580169199,
+          "lng": 140.4841357469559,
+          "z": 18
+        }
+      },
+      "updatedAt": "2026-07-16T13:14:27.658Z"
     }
-  ]
+  ],
+  "sim": {
+    "source": {
+      "lat": 37.49306864451277,
+      "lng": 140.48438251018527,
+      "memo": "白沢第三分団 ポンプ車",
+      "memoPos": "right"
+    },
+    "fire": {
+      "lat": 37.49433700339292,
+      "lng": 140.4821589589119,
+      "memo": ""
+    },
+    "relays": [
+      {
+        "lat": 37.49385605105084,
+        "lng": 140.4841974377632,
+        "memo": "第一機関",
+        "memoPos": "right"
+      },
+      {
+        "lat": 37.49458599077802,
+        "lng": 140.48392653465274,
+        "memo": "第二機関",
+        "memoPos": "right"
+      },
+      {
+        "lat": 37.49477113470577,
+        "lng": 140.48302799463275,
+        "memo": "第三機関",
+        "memoPos": "right"
+      },
+      {
+        "lat": 37.494542149381246,
+        "lng": 140.48285307305264,
+        "memo": "",
+        "via": true
+      }
+    ],
+    "notes": [
+      {
+        "lat": 37.49473282910322,
+        "lng": 140.48256665468216,
+        "memo": "渡辺常夫様宅",
+        "memoPos": "top",
+        "memoVertical": false,
+        "fontSize": 11,
+        "bold": false
+      },
+      {
+        "lat": 37.49283454907627,
+        "lng": 140.48293411731723,
+        "memo": "松沢2区集会所",
+        "memoPos": "bottom",
+        "memoVertical": false,
+        "fontSize": 11,
+        "bold": false
+      },
+      {
+        "lat": 37.49288136822226,
+        "lng": 140.48383533954623,
+        "memo": "荒川藤典様宅\n(旧三松屋商店)",
+        "memoPos": "bottom",
+        "memoVertical": false,
+        "fontSize": 11,
+        "bold": false
+      }
+    ],
+    "params": {
+      "hoseLen": 20,
+      "factor": 1.1,
+      "legMax": 200
+    },
+    "view": {
+      "lat": 37.487842299443166,
+      "lng": 140.48784976345863,
+      "z": 16
+    }
+  }
 }
