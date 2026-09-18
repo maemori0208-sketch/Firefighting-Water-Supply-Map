@@ -655,10 +655,7 @@
     <div class="map-card" id="layerCard">
       <div class="hd">表示レイヤー</div>
       <div class="bd">
-        <div class="row"><input type="checkbox" id="lyBase2" ><label for="lyBase2">背景を淡色地図に</label></div>
-        <div class="row"><input type="checkbox" id="lyPhoto" ><label for="lyPhoto">航空写真</label></div>
-        <div class="row"><input type="checkbox" id="lyVector" ><label for="lyVector">🧩 ベクトル地図（試験・見た目カスタム）</label></div>
-        <div class="row"><input type="checkbox" id="lyLabel" ><label for="lyLabel">🏷 地名を表示（航空写真向け）</label></div>
+        <div class="row"><input type="checkbox" id="lyPhoto" ><label for="lyPhoto">航空写真（地名つき）</label></div>
         <div class="row" style="padding-bottom:2px"><label>🏔 地形表現</label></div>
         <div class="seg" id="terrainSeg">
           <button data-t="none" class="on" title="地形表現なし">なし</button>
@@ -896,7 +893,7 @@
             <li><b>位置調整</b>：「位置調整」ON中はマーカーをドラッグで移動（もう一度押して解除）</li>
             <li><b>写真</b>：編集パネルの「写真を追加」から撮影・ファイル選択（複数可）。写真タップで拡大表示</li>
             <li><b>絞り込み・並び替え</b>：一覧上部の種別・状態チップ、地区の選択、検索、並び替え</li>
-            <li><b>表示レイヤー</b>：右上のカードで淡色地図／航空写真、地形表現（陰影・標高・傾斜）、水利基準円・水利空白などを切替。<b>🏷地名を表示</b>をONにすると航空写真の上にも地名が重なります</li>
+            <li><b>表示レイヤー</b>：右上のカードで航空写真（地名つき）への切替、地形表現（陰影・標高・傾斜）、水利基準円・水利空白などを設定。背景は既定でベクトル地図です</li>
           </ul>
         </div>
 
@@ -983,14 +980,12 @@ let editing = null; // 作業中コピー
 const map = L.map('map',{zoomControl:true, attributionControl:true}).setView(CENTER, 15);
 const gsiStd = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
   {maxZoom:18, attribution:"地理院タイル"});
-const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
-  {maxZoom:18, attribution:"地理院タイル"});
 const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
   {maxZoom:18, attribution:"地理院タイル（シームレス空中写真）"});
-gsiStd.addTo(map);
+gsiStd.addTo(map); // 既定はベクトル地図だが、読込完了まで／失敗時のフォールバックとして先に表示しておく
 
 /* ============ ベクトル地図（地理院 最適化ベクトルタイル・MapLibre GL）============ */
-/* オプトイン：初回ON時にMapLibre等を遅延読込。既存のLeaflet部品は上に載る（PDFはラスタ据え置き）*/
+/* 既定の背景。既存のLeaflet部品（マーカー等）は上に載る（PDFはラスタ据え置き）*/
 const VECTOR_STYLE_URL="https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json";
 const VECTOR_TILES="https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/{z}/{x}/{y}.pbf";
 let vectorLayer=null;
@@ -1009,37 +1004,49 @@ function customizeVectorStyle(style){
     // ※ paintのプロパティはレイヤー種別に一致させること（不一致だとスタイル全体が読み込めません）
     if(l.type==='line' && l.id.indexOf('等高線')>=0){ l.paint=l.paint||{}; l.paint['line-color']='#a86a34'; } // 等高線を濃く（読みやすく）
     if(l.type==='symbol' && l.id.indexOf('注記')>=0 && l.layout && typeof l.layout['text-size']==='number') l.layout['text-size']=l.layout['text-size']+1; // 地名をやや大きく
+    // 注記(地名)データは出典側の精度上限がズーム16相当まで。それを超えて拡大するとタイルが引き伸ばされ、
+    // 文字の位置がずれて見える／衝突判定が乱れて消えることがあるため、その手前で表示を打ち止める。
+    if(l.type==='symbol'){ if(l.maxzoom==null || l.maxzoom>17) l.maxzoom=17; }
   });
   return style;
 }
 /* ▲▲ ここまでがカスタム部分 ▲▲ */
+let rawStyleCache=null; // 生スタイルJSON（加工前）をキャッシュし、用途ごとの二重fetchを避ける
+async function fetchBaseStyle(){
+  if(!rawStyleCache) rawStyleCache=await (await fetch(VECTOR_STYLE_URL,{cache:'force-cache'})).json();
+  return JSON.parse(JSON.stringify(rawStyleCache)); // 呼び出しごとに複製（複数のMapLibreインスタンスで使い回すため）
+}
 async function ensureVectorLayer(){
   if(vectorLayer) return vectorLayer;
   await loadVectorDeps();
-  const style=await (await fetch(VECTOR_STYLE_URL,{cache:'force-cache'})).json();
+  const style=await fetchBaseStyle();
   style.sources.v={ type:"vector", tiles:[VECTOR_TILES], minzoom:4, maxzoom:16,
     attribution:"地理院タイル（最適化ベクトルタイル）" };   // PMTiles→XYZ pbf に差し替え（追加ライブラリ不要）
   customizeVectorStyle(style);
   vectorLayer=L.maplibreGL({ style, attribution:"地理院タイル（最適化ベクトルタイル）" });
   return vectorLayer;
 }
-/* 地名（注記）だけの透過オーバーレイ：航空写真の上に地名を重ねる用 */
-let labelLayer=null;
-async function ensureLabelLayer(){
-  if(labelLayer) return labelLayer;
+/* 地名（注記）だけを抜き出したスタイル：航空写真の上に重ねる透過オーバーレイ、およびPDFのラベル合成で共用 */
+async function getLabelStyle(){
   await loadVectorDeps();
-  const style=await (await fetch(VECTOR_STYLE_URL,{cache:'force-cache'})).json();
+  const style=await fetchBaseStyle();
   style.sources.v={ type:"vector", tiles:[VECTOR_TILES], minzoom:4, maxzoom:16,
     attribution:"地理院タイル（最適化ベクトルタイル・注記）" };
   style.layers=(style.layers||[]).filter(l=>l.type==='symbol'); // 注記(symbol)だけ残す＝背景透過
   customizeVectorStyle(style);
+  return style;
+}
+let labelLayer=null;
+async function ensureLabelLayer(){
+  if(labelLayer) return labelLayer;
+  const style=await getLabelStyle();
   labelLayer=L.maplibreGL({ style, attribution:"地理院タイル（最適化ベクトルタイル・注記）" });
   return labelLayer;
 }
-/* 航空写真のときだけ地名オーバーレイを表示（標準/ベクトルは元々地名があるので二重表示を回避）*/
+/* 航空写真のときだけ地名オーバーレイを表示（ベクトル地図は元々地名があるので二重表示を回避）*/
 function updateLabelOverlay(){
   if(!labelLayer) return;
-  const want = $('lyLabel') && $('lyLabel').checked && baseMode()==='photo';
+  const want = baseMode()==='photo';
   if(want && !map.hasLayer(labelLayer)){
     labelLayer.addTo(map);
     const c=labelLayer.getContainer&&labelLayer.getContainer(); if(c) c.style.zIndex=350; // 写真(200)・陰影(250)より上、マーカー(400)より下
@@ -1047,20 +1054,18 @@ function updateLabelOverlay(){
     map.removeLayer(labelLayer);
   }
 }
-/* 背景の優先順位：航空写真 ＞ ベクトル ＞ 淡色 ＞ 標準 */
+/* 背景：航空写真 ＞ ベクトル地図（既定）。ベクトルが未読込／読込失敗の場合のみ自動でラスタ標準地図にフォールバック */
 function baseMode(){
   if($('lyPhoto').checked) return 'photo';
-  if($('lyVector') && $('lyVector').checked && vectorLayer) return 'vector';
-  if($('lyBase2').checked) return 'pale';
+  if(vectorLayer) return 'vector';
   return 'std';
 }
 function setBaseLayer(){
   const m=baseMode();
-  [gsiStd,gsiPale,gsiPhoto].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
+  [gsiStd,gsiPhoto].forEach(l=>{ if(map.hasLayer(l)) map.removeLayer(l); });
   if(vectorLayer && map.hasLayer(vectorLayer) && m!=='vector') map.removeLayer(vectorLayer);
   if(m==='photo') gsiPhoto.addTo(map);
   else if(m==='vector'){ vectorLayer.addTo(map); const c=vectorLayer.getContainer&&vectorLayer.getContainer(); if(c) c.style.zIndex=200; }
-  else if(m==='pale') gsiPale.addTo(map);
   else gsiStd.addTo(map);
   updateLabelOverlay();
 }
@@ -1308,23 +1313,12 @@ document.getElementById('search').oninput=e=>{ filter.q=e.target.value.trim(); r
 $('listSort').onchange=e=>{ filter.sort=e.target.value; render(); savePrefs(); };
 
 /* ============ レイヤー切替 ============ */
-document.getElementById('lyBase2').onchange=()=>{ setBaseLayer(); savePrefs(); };
-document.getElementById('lyPhoto').onchange=()=>{ setBaseLayer(); savePrefs(); };
-document.getElementById('lyVector').onchange=async e=>{
+document.getElementById('lyPhoto').onchange=async e=>{
+  setBaseLayer(); savePrefs(); // 写真はまず即座に表示し、地名は読み込み次第で重ねる
   if(e.target.checked){
-    toast("ベクトル地図を読み込み中…");
-    try{ await ensureVectorLayer(); }
-    catch(err){ toast("ベクトル地図の読み込みに失敗しました（通信をご確認ください）"); e.target.checked=false; return; }
+    try{ await ensureLabelLayer(); updateLabelOverlay(); }
+    catch(err){ toast("地名の読み込みに失敗しました（地名なしで表示します）"); }
   }
-  setBaseLayer(); savePrefs();
-};
-document.getElementById('lyLabel').onchange=async e=>{
-  if(e.target.checked){
-    toast("地名データを読み込み中…");
-    try{ await ensureLabelLayer(); }
-    catch(err){ toast("地名の読み込みに失敗しました（通信をご確認ください）"); e.target.checked=false; return; }
-  }
-  updateLabelOverlay(); savePrefs();
 };
 document.querySelectorAll('#terrainSeg button').forEach(b=>{
   b.onclick=()=>{ setTerrain(b.dataset.t); savePrefs(); };
@@ -2320,11 +2314,35 @@ function planBounds(d){
 /* 現在の背景レイヤーに合わせたタイル種別を返す */
 function currentBaseTile(){
   if($('lyPhoto') && $('lyPhoto').checked) return {u:'seamlessphoto', ext:'jpg', name:'地理院タイル（シームレス空中写真）'};
-  if($('lyBase2') && $('lyBase2').checked) return {u:'pale', ext:'png', name:'地理院タイル（淡色地図）'};
-  return {u:'std', ext:'png', name:'地理院タイル'};
+  return {u:'std', ext:'png', name:'地理院タイル'};   // ベクトル表示中もPDFはラスタ標準地図（据え置き）
 }
 /* 訓練範囲を地理院タイルで描画し、水元/中継/火点/メモと送水線を重ねて画像化。
    出力は固定サイズ(W×H)で訓練範囲を中央に配置＝表示枠と同比率なので切れない */
+/* 航空写真PDF用：地名(注記)だけのオフスクリーンMapLibreを指定の中心・ズーム・サイズで描画してcanvasを返す。
+   ※MapLibreのzoomは512pxタイル基準・本アプリの z は256pxタイル基準(XYZ)のため、渡す際は 1 だけ低くする（z-1）。*/
+function renderLabelOverlayImage(cLat,cLng,z,W,H){
+  return getLabelStyle().then(style=>new Promise(resolve=>{
+    const div=document.createElement('div');
+    div.style.cssText=`position:fixed; left:-9999px; top:0; width:${W}px; height:${H}px; pointer-events:none;`;
+    document.body.appendChild(div);
+    let done=false, tmp=null;
+    const finish=srcCanvas=>{ if(done) return; done=true; clearTimeout(tm);
+      let out=null;
+      if(srcCanvas){
+        try{ out=document.createElement('canvas'); out.width=srcCanvas.width; out.height=srcCanvas.height;
+          out.getContext('2d').drawImage(srcCanvas,0,0); }  // remove()でGLコンテキストが破棄される前に複製しておく
+        catch(e){ out=null; }
+      }
+      try{ tmp&&tmp.remove(); }catch(e){} try{ document.body.removeChild(div); }catch(e){}
+      resolve(out); };
+    const tm=setTimeout(()=>finish(null), 8000);   // 応答が遅くても地図生成自体は止めない（地名なしで続行）
+    try{
+      tmp=new maplibregl.Map({ container:div, style, center:[cLng,cLat], zoom:z-1,
+        interactive:false, attributionControl:false, preserveDrawingBuffer:true, fadeDuration:0 });
+      tmp.on('idle', ()=>{ try{ finish(tmp.getCanvas()); }catch(e){ finish(null); } });
+    }catch(e){ finish(null); }
+  })).catch(()=>null);
+}
 function renderPlanMapImage(d, opt){
   const bb=planBounds(d); if(!bb) return Promise.resolve(null);
   const base=(opt&&opt.base)||currentBaseTile();
@@ -2368,7 +2386,11 @@ function renderPlanMapImage(d, opt){
     img.src=`https://cyberjapandata.gsi.go.jp/xyz/${base.u}/${z}/${t.tx}/${t.ty}.${base.ext}`;
     if(img.complete) finish(true);                  // キャッシュ済み画像はonloadが発火しない場合がある
   });
-  return Promise.all(tiles.map(load)).then(()=>{
+  return Promise.all(tiles.map(load)).then(async()=>{
+    // 航空写真には地名が無いので、地名だけのベクトル地図を重ねて合成（失敗時は地名なしで続行）
+    if(base.u==='seamlessphoto'){
+      try{ const lbl=await renderLabelOverlayImage(cLat,cLng,z,W,H); if(lbl) ctx.drawImage(lbl,0,0,W,H); }catch(e){}
+    }
     // 既設水利（背景の点）
     if(typeof points!=='undefined') points.forEach(p=>{
       const [x,y]=toXY(p); if(x<-8||y<-8||x>W+8||y>H+8) return;
@@ -2625,7 +2647,7 @@ function savePrefs(){
       district:filter.district, type:filter.type, status:filter.status, q:filter.q,
       sort:filter.sort, planSort:planSortMode,
       cover:globalCover, hose:$('hoseR').value,
-      layers:{pale:$('lyBase2').checked, photo:$('lyPhoto').checked, vector:$('lyVector').checked, label:$('lyLabel').checked, terrain:terrainMode, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
+      layers:{photo:$('lyPhoto').checked, terrain:terrainMode, cover:$('lyCover').checked, hose:$('lyHose').checked, risk:$('lyRisk').checked},
       simParams:{hose:sim.hoseLen, factor:sim.factor, legMax:sim.legMax},
       simPlan:{source:sim.source, fire:sim.fire, relays:sim.relays, notes:sim.notes},
       view:{lat:c.lat, lng:c.lng, z:map.getZoom()}
@@ -2660,10 +2682,7 @@ function applyPrefs(p){
   render();
   // レイヤーのON/OFF（既存ハンドラを再利用）
   if(p.layers){
-    $('lyBase2').checked=!!p.layers.pale; $('lyBase2').dispatchEvent(new Event('change'));
-    $('lyPhoto').checked=!!p.layers.photo; $('lyPhoto').dispatchEvent(new Event('change'));
-    if(p.layers.vector){ $('lyVector').checked=true; $('lyVector').dispatchEvent(new Event('change')); }  // 非同期で読込
-    if(p.layers.label){ $('lyLabel').checked=true; $('lyLabel').dispatchEvent(new Event('change')); }  // 地名オーバーレイ（非同期で読込）
+    $('lyPhoto').checked=!!p.layers.photo; $('lyPhoto').dispatchEvent(new Event('change'));  // 非同期で地名も読込
     setTerrain(p.layers.terrain || (p.layers.shade?"shade":"none"));  // shadeは旧prefsとの互換
     $('lyCover').checked=p.layers.cover!==false; $('lyCover').dispatchEvent(new Event('change'));
     $('lyHose').checked=!!p.layers.hose; $('lyHose').dispatchEvent(new Event('change'));
@@ -2799,6 +2818,11 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize', setAp
   if(!ok) seed();                         // それも無ければサンプル
   const _prefs = loadPrefs();
   if(_prefs){ applyPrefs(_prefs); } else { render(); }
+  // 背景の既定はベクトル地図（航空写真を明示的に選んでいる場合を除く。未選択の既存ユーザーも次回起動時にベクトルへ移行）
+  if(!(_prefs && _prefs.layers && _prefs.layers.photo)){
+    try{ await ensureVectorLayer(); }catch(e){ /* 失敗時はラスタ標準地図のまま（自動フォールバック） */ }
+    setBaseLayer();
+  }
   map.on('moveend', savePrefs);           // 地図を動かしたら位置を記憶
   map.on('moveend', ()=>{ if($('lyRisk').checked) computeRisk(); });
   setTimeout(()=>map.invalidateSize(),200);
