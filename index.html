@@ -139,6 +139,14 @@
   #legend .lg{display:flex; align-items:center; gap:7px; padding:2px 0; font-size:11.5px}
   #legend .k{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
 
+  /* 縮尺バー（100m/200m等の目安）：航空写真の上でも読めるよう白地の板にする */
+  .scale-box{background:rgba(255,255,255,.9); border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.3);
+    padding:5px 16px 4px 9px; color:#12202f; font-size:11px; font-weight:700; pointer-events:none}
+  .scale-box .sc-bar{position:relative; height:6px; border:2px solid #12202f; border-top:none; box-sizing:content-box}
+  .scale-box .sc-bar i{position:absolute; left:50%; bottom:0; width:0; height:4px; border-left:2px solid #12202f; transform:translateX(-1px)}
+  .scale-box .sc-lb{position:relative; height:13px; margin-top:1px}
+  .scale-box .sc-lb span{position:absolute; top:0; white-space:nowrap; transform:translateX(-50%); line-height:13px}
+
   /* add-mode hint */
   #addHint, #moveHint{
     position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1000;
@@ -983,6 +991,33 @@ const gsiStd = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}
 const gsiPhoto = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
   {maxZoom:18, attribution:"地理院タイル（シームレス空中写真）"});
 gsiStd.addTo(map); // 既定はベクトル地図だが、読込完了まで／失敗時のフォールバックとして先に表示しておく
+
+/* ============ 縮尺バー（100m・200m等の距離の目安）============ */
+/* 現在の拡大率と緯度から1pxあたりの距離を求め、幅が220px以内で最長のキリの良い距離（…50/100/200/500m…）を選ぶ。
+   目盛りは 0・中間・全長 の3点（例：ズーム16付近なら 0–100–200m）。 */
+const ScaleBox=L.Control.extend({
+  options:{position:'topleft'},
+  onAdd(m){
+    this._m=m; this._el=L.DomUtil.create('div','scale-box leaflet-control');
+    m.on('zoom zoomend moveend resize',this._upd,this); this._upd(); return this._el;
+  },
+  onRemove(m){ m.off('zoom zoomend moveend resize',this._upd,this); },
+  _upd(){
+    const m=this._m, c=m.getCenter(), z=m.getZoom();
+    const mpp=40075016.686*Math.cos(c.lat*Math.PI/180)/(256*Math.pow(2,z));   // メートル/ピクセル
+    const steps=[5,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000];
+    let len=steps[0];
+    const maxPx=window.innerWidth<=600?130:220;   // スマホは右上のレイヤーカードと重ならない幅に
+    for(const s of steps){ if(s/mpp<=maxPx) len=s; }
+    const px=Math.round(len/mpp);
+    const fmt=v=>v>=1000?(v/1000)+' km':v+' m';
+    const hs=len>=1000?len/2000:len/2;   // 中間目盛りの数値（km表記のときはkm単位）
+    this._el.innerHTML=`<div class="sc-bar" style="width:${px}px"><i></i></div>`
+      +`<div class="sc-lb" style="width:${px}px"><span style="left:0">0</span>`
+      +`<span style="left:50%">${hs}</span><span style="left:100%">${fmt(len)}</span></div>`;
+  }
+});
+new ScaleBox().addTo(map);
 
 /* ============ ベクトル地図（地理院 最適化ベクトルタイル・MapLibre GL）============ */
 /* 既定の背景。既存のLeaflet部品（マーカー等）は上に載る（PDFはラスタ据え置き）*/
