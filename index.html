@@ -139,14 +139,15 @@
   #legend .lg{display:flex; align-items:center; gap:7px; padding:2px 0; font-size:11.5px}
   #legend .k{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)}
 
-  /* 縮尺バー（100m/200m等の目安）：地理院タイル表記のすぐ上、背景は半透明 */
+  /* 縮尺バー（100m/200m等の目安）：通常時は地理院タイル表記のすぐ上、訓練中は左上（ズーム操作の下）に退避。背景は半透明 */
   .scale-box{background:rgba(255,255,255,.5); border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.2);
-    padding:5px 16px 4px 9px; margin:0 8px 2px 0 !important; color:#12202f; font-size:11px; font-weight:700; pointer-events:none}
+    padding:5px 16px 4px 9px; color:#12202f; font-size:11px; font-weight:700; pointer-events:none}
+  .leaflet-bottom .scale-box{margin:0 8px 2px 0 !important}   /* 右下：出典表記に詰めて重ねる */
+  .leaflet-top .scale-box{margin-top:8px !important}          /* 左上（訓練中）：ズームボタンの下に少し余白 */
   .scale-box .sc-bar{position:relative; height:6px; border:2px solid #12202f; border-top:none; box-sizing:content-box}
   .scale-box .sc-bar i{position:absolute; left:50%; bottom:0; width:0; height:4px; border-left:2px solid #12202f; transform:translateX(-1px)}
   .scale-box .sc-lb{position:relative; height:13px; margin-top:1px}
   .scale-box .sc-lb span{position:absolute; top:0; white-space:nowrap; transform:translateX(-50%); line-height:13px}
-  body.sim-on .scale-box{display:none}   /* 訓練中は送水シミュレーションバーと同じ右下に来るため隠す */
 
   /* add-mode hint */
   #addHint, #moveHint{
@@ -1018,7 +1019,7 @@ const ScaleBox=L.Control.extend({
       +`<span style="left:50%">${hs}</span><span style="left:100%">${fmt(len)}</span></div>`;
   }
 });
-new ScaleBox().addTo(map);
+const scaleBoxCtl=new ScaleBox().addTo(map);
 
 /* ============ ベクトル地図（地理院 最適化ベクトルタイル・MapLibre GL）============ */
 /* 既定の背景。既存のLeaflet部品（マーカー等）は上に載る（PDFはラスタ据え置き）*/
@@ -2008,6 +2009,7 @@ function simEnter(){
   if(moveMode) setMoveMode(false);
   map.getContainer().style.cursor='';
   simLayer.addTo(map); simLabelLayer.addTo(map);   // 訓練レイヤーを表示
+  scaleBoxCtl.setPosition('topleft');   // 訓練中は送水シミュレーションバー（右下/下部）を避けて左上へ
   // スマホでは初期は畳んで地図を広く見せる（見出しの要約で状況は分かる）
   $('simCard').classList.toggle('collapsed', isMobile());
   simRender();
@@ -2024,6 +2026,7 @@ function simExit(){
   document.querySelectorAll('.sim-btn[data-place]').forEach(x=>x.classList.remove('armed'));
   map.getContainer().style.cursor='';
   map.removeLayer(simLayer); map.removeLayer(simLabelLayer);   // 訓練レイヤーを非表示
+  scaleBoxCtl.setPosition('bottomright');   // 通常表示（出典表記の上）に戻す
 }
 $('simBtn').title = "訓練レイヤーの表示／非表示";
 $('simBtn').onclick=()=> sim.active?simExit():simEnter();
